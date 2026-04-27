@@ -1,5 +1,7 @@
 from datetime import datetime as dt
+from pathlib import Path
 from typing import Any
+from os import remove as remove_file, rename as rename_file
 
 from dateparser import parse as dateparser
 from loguru import logger
@@ -8,6 +10,8 @@ from taskcli import config
 from taskcli import storage
 
 # This file is for everything related to tasks.
+
+PLACEHOLDER_TASKS: dict[str, Any] = {"next_id": 1, "tasklist": []}
 
 
 class Task:
@@ -105,20 +109,23 @@ class TasklistManager:
     """This class should validate the tasks parameters before putting them in the tasks class, and also
     do some other stuff to manipulate the tasklist correctly"""
 
-    PLACEHOLDER_TASKS: dict[str, Any] = {"next_id": 1, "tasklist": []}
-
-    def __init__(self) -> None:
-        data = storage.load_json(storage.TASKS_FILEPATH)
+    def __init__(self, tasklist_filepath) -> None:
+        data = storage.load_json(tasklist_filepath)
 
         self.old_tasklist: list[dict[str, Any]] = data["tasklist"]
 
         # rehydrating the python dictionaries into classes
-        self.tasklist = self._rehydrate_loaded_tasks()
+        self.tasklist: list[Task] = self._rehydrate_loaded_tasks()
+        self._tasklist_filepath = tasklist_filepath
         self._next_id: int = data["next_id"]
 
     @property
     def next_id(self):
         return self._next_id
+
+    @property
+    def tasklist_filepath(self):
+        return self._tasklist_filepath
 
     def increment_id(self):
         self._next_id += 1
@@ -332,7 +339,59 @@ class TasklistManager:
         # make the class objects dictionaries first
         saved_tasklist = [task.to_dict() for task in self.tasklist]
         storage.write_json(
-            storage.TASKS_FILEPATH,
+            self.tasklist_filepath,
             {"next_id": self.next_id, "tasklist": saved_tasklist},
         )
-        logger.success(f"Successfully saved tasks to {storage.TASKS_FILEPATH}")
+        logger.success(f"Successfully saved tasks to {self.tasklist_filepath}")
+
+
+class ListManager:
+    def __init__(self, base_dir: Path) -> None:
+        self.base_dir: Path = base_dir
+
+    @property
+    def tasklists(self) -> list[str]:
+        """Always returns a fresh list of available tasklists from disk."""
+        return [file.stem for file in self.base_dir.glob("*.json")]
+
+    def check_exists(self, target_tasklist: str) -> bool:
+        """Checks if the tasklist exists
+
+        Args:
+            target_tasklist (str): The name of the tasklist being checked
+
+        Returns:
+            bool: If it exists, it is True, else it is False.
+        """
+        return target_tasklist in self.tasklists
+
+    def add_tasklist(self, tasklist_name: str) -> None:
+        storage.write_json(self.base_dir / f"{tasklist_name}.json", PLACEHOLDER_TASKS)
+
+    def delete_tasklist(self, tasklist_name: str) -> None:
+        if not self.check_exists(tasklist_name):
+            raise ValueError(
+                f"Tasklist name is not valid as it is not a real tasklist: {tasklist_name}"
+            )
+        if tasklist_name == "main":
+            raise ValueError(
+                "Cannot remove the main tasklist. If you want to change the name, use the rename command instead."
+            )
+        remove_file(storage.TASKS_FILEPATH / f"{tasklist_name}.json")
+
+    def rename_tasklist(self, old_tasklist_name: str, new_tasklist_name: str) -> None:
+        """Renames a tasklist called old_tasklist_name to new_tasklist_name
+
+        i feel like args are self explanatory
+
+        Raises:
+            ValueError: If the old_tasklist_name does not exist, raise this error.
+        """
+        if not self.check_exists(old_tasklist_name):
+            raise ValueError(
+                f"Tasklist name is not valid as it is not a real tasklist: {old_tasklist_name}"
+            )
+        rename_file(
+            storage.TASKS_FILEPATH / f"{old_tasklist_name}.json",
+            storage.TASKS_FILEPATH / f"{new_tasklist_name}.json",
+        )

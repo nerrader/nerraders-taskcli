@@ -26,10 +26,14 @@ CONSOLE = Console(theme=CUSTOM_THEME)
 print = CONSOLE.print
 app = typer.Typer()
 
+tasklist_command = typer.Typer()
+app.add_typer(tasklist_command, name="tasklist")
+
 
 @dataclass
 class ContextObject:
     task_manager: tasks.TasklistManager
+    tasklist_manager: tasks.ListManager
     config: config.Config
 
 
@@ -100,16 +104,16 @@ def add_task(
 
 
 @app.command("delete")
-@app.command("remove", help="Alias for delete command")
-@app.command("del", help="Alias for delete command")
-@app.command("rm", help="Alias for delete command")
+@app.command("remove", hidden=True)
+@app.command("del", hidden=True)
+@app.command("rm", hidden=True)
 def delete_task(
     context: typer.Context,
     task_id: Annotated[
-        int, typer.Argument(help="The task id of the task being deleted")
+        int, typer.Argument(help="The Task ID of the task being deleted")
     ],
 ) -> None:
-    """Deletes a task based on its ID.
+    """Deletes a task based on its ID. Aliases: remove | del | rm
 
     Args:
         context (typer.Context): The context required to read and write to the needed global variables
@@ -314,7 +318,6 @@ def display_tasks_table(context: typer.Context) -> None:
     for column_name in state.config.visible_columns:
         tasks_table.add_column(column_name)
 
-    # where else am i supposed to put it
     # this auto clears all done tasks
     if state.config.behaviour_settings.auto_clear_done_tasks:
         state.task_manager.clear_done_tasks()
@@ -331,10 +334,10 @@ def display_tasks_table(context: typer.Context) -> None:
 
 
 @app.command("list")
-@app.command("view", help="Alias for list command")
-@app.command("ls", help="Alias for list command")
+@app.command("view", hidden=True)
+@app.command("ls", hidden=True)
 def list_tasks(context: typer.Context) -> None:
-    """To list the tasks from the tasklist"""
+    """To list the tasks from the tasklist. Aliases: view | ls"""
     logger.info("User invoked 'list' command")
     """The actual CLI Command to list the rich table tasklist"""
     display_tasks_table(context)
@@ -429,11 +432,13 @@ def initialize(
         format="{time:DD-MM-YYYY_HH:mm:ss} > {name}:{line} > {level}: {message} | {extra}",
     )
 
-    storage.check_storage(
-        tasks.TasklistManager.PLACEHOLDER_TASKS, config.Config.DEFAULT_CONFIG
-    )
-    task_manager: tasks.TasklistManager = tasks.TasklistManager()
+    storage.check_storage(tasks.PLACEHOLDER_TASKS, config.Config.DEFAULT_CONFIG)
+
     context_config: config.Config = config.Config()
+    task_manager: tasks.TasklistManager = tasks.TasklistManager(
+        storage.TASKS_FILEPATH / f"{context_config.current_tasklist}.json"
+    )
+    tasklist_manager = tasks.ListManager(storage.TASKS_FILEPATH)
     final_verbose_mode: bool = context_config.behaviour_settings.verbose_mode or verbose
 
     logger.debug(f"Verbose mode is {final_verbose_mode}")
@@ -444,10 +449,103 @@ def initialize(
             level="DEBUG",
         )
 
-    context.obj = ContextObject(task_manager, context_config)
+    context.obj = ContextObject(task_manager, tasklist_manager, context_config)
     logger.debug(
         "App initialization done. Put all the variables needed in context.obj",
     )
+
+
+@tasklist_command.command("add")
+def add_tasklist(
+    context: typer.Context,
+    name: Annotated[list[str], typer.Argument(help="The new tasklist name.")],
+):
+    """Adds a new tasklist which you can switch to using the switch command.
+
+    Args:
+        name (str): The new tasklist's name.
+    """
+    state: ContextObject = context.obj  # just for the autocomplete really
+    logger.info("User invoked 'tasklist add' command.")
+
+    joined_name: str = (" ".join(name)).strip()
+    state.tasklist_manager.add_tasklist(joined_name)
+    print(f"Successfully made a new tasklist: {joined_name}")
+    logger.success(f"Successfully made a new tasklist: {joined_name}")
+
+
+@tasklist_command.command("delete")
+@tasklist_command.command("remove", hidden=True)
+@tasklist_command.command("del", hidden=True)
+@tasklist_command.command("rm", hidden=True)
+def delete_tasklist(
+    context: typer.Context,
+    name: Annotated[
+        list[str], typer.Argument(help="The name of the tasklist that will be deleted.")
+    ],
+):
+    """Deletes a tasklist. Aliases: remove | del | rm"""
+    state: ContextObject = context.obj  # just for the autocomplete really
+    logger.info("User invoked 'tasklist delete' command.")
+
+    joined_name: str = (" ".join(name)).strip()
+    state.tasklist_manager.delete_tasklist(joined_name)
+    print(f"Successfully deleted a tasklist: {joined_name}")
+    logger.success(f"Successfully deleted a tasklist: {joined_name}")
+
+
+@tasklist_command.command("rename")
+def rename_tasklist(
+    context: typer.Context,
+    old_name: Annotated[
+        str, typer.Argument(help="The name of the tasklist that you want to rename")
+    ],
+    new_name: Annotated[
+        str, typer.Argument(help="The new renamed name of the tasklist")
+    ],
+):
+    state: ContextObject = context.obj  # just for the autocomplete really
+    state.tasklist_manager.rename_tasklist(old_name, new_name)
+    print(f"Successfully renamed tasklist into '{new_name}'")
+    logger.success(f"Successfully renamed tasklist into '{new_name}'")
+
+
+@tasklist_command.command("switch")
+def switch_tasklists(
+    context: typer.Context,
+    name: Annotated[
+        list[str],
+        typer.Argument(help="The name of the tasklist you want to switch to."),
+    ],
+):
+    state: ContextObject = context.obj  # just for the autocomplete really
+
+    joined_name: str = (" ".join(name)).strip()
+    if joined_name not in state.tasklist_manager.tasklists:
+        raise ValueError(f"Invalid tasklist name, as it doesn't exist: {joined_name}")
+
+    state.config.current_tasklist = joined_name
+    state.config.save_config()
+
+    new_path = storage.TASKS_FILEPATH / f"{joined_name}.json"
+    state.task_manager = tasks.TasklistManager(new_path)
+
+    print(f"Switched to tasklist: {joined_name}.", style="info")
+    logger.info(f"User switch to tasklist '{joined_name}'")
+
+    display_tasks_table(context)
+
+
+@tasklist_command.command("list")
+@tasklist_command.command("view", hidden=True)
+@tasklist_command.command("ls", hidden=True)
+def list_tasklists(context: typer.Context):
+    state: ContextObject = context.obj  # just for the autocomplete really
+
+    for tasklist in state.tasklist_manager.tasklists:
+        print(
+            f"- {tasklist} {'(CURRENT)' if tasklist == state.config.current_tasklist else ''}"
+        )
 
 
 def main():

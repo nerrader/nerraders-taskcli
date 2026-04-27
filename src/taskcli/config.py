@@ -46,6 +46,7 @@ class Config:
     DEFAULT_CONFIG: dict[str, Any] = {
         "visible_columns": ["ID", "Name", "Status", "Priority"],
         "default_priority": "medium",
+        "current_tasklist": "main",
         "behaviour_settings": {
             "auto_clear_done_tasks": False,
             "require_clear_confirmation": True,
@@ -63,6 +64,7 @@ class Config:
 
         self._visible_columns: list[str] = data["visible_columns"]
         self._default_priority: str = data["default_priority"]
+        self.current_tasklist: str = data["current_tasklist"]
         self._behaviour_settings: BehaviourConfig = BehaviourConfig(
             **data["behaviour_settings"]
         )
@@ -133,6 +135,7 @@ class Config:
         data = {
             "visible_columns": self._visible_columns,
             "default_priority": self._default_priority,
+            "current_tasklist": self.current_tasklist,
             "behaviour_settings": asdict(self._behaviour_settings),
         }
         storage.write_json(storage.CONFIG_FILEPATH, data)

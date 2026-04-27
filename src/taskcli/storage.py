@@ -10,7 +10,7 @@ MAIN_FILEPATH: Path = (
     Path(os.getenv("APPDATA", Path.home() / "AppData" / "Roaming")) / "taskcli"
 )
 CONFIG_FILEPATH: Path = MAIN_FILEPATH / "config.json"
-TASKS_FILEPATH: Path = MAIN_FILEPATH / "tasks.json"
+TASKS_FILEPATH: Path = MAIN_FILEPATH / "tasklists"
 
 # This file is for anything related to reading and writing to files in the main filepath
 
@@ -32,19 +32,30 @@ def write_json(filepath: Path, data: Any) -> None:
         json.dump(data, file, indent=4, ensure_ascii=False)
 
 
-def check_storage(default_tasks: dict, default_config: dict) -> None:
+def check_storage(placeholder_tasks: dict, default_config: dict) -> None:
     """checks if the files exist, if not it creates them and fills them with default data"""
     logger.debug("Checking storage")
-    # make the main directory and logs directory in the appdata if it doesn't exist
-    os.makedirs(MAIN_FILEPATH, exist_ok=True)
+    # make both the main directory and tasks directory in the appdata if it doesn't exist
+    os.makedirs(TASKS_FILEPATH, exist_ok=True)
 
     # check if the files exist, if not create them and fill them with default data
-    if not TASKS_FILEPATH.exists():
-        logger.debug("Tasklist file wasn't found, set tasks to the starting tasklist.")
-        write_json(TASKS_FILEPATH, default_tasks)
     if not CONFIG_FILEPATH.exists():
         logger.debug("Config file wasn't found, set configs to default")
         write_json(CONFIG_FILEPATH, default_config)
+
+    tasklists = glob(os.path.join(TASKS_FILEPATH, "*.json"))
+    if not tasklists:  # if empty
+        # then create a main default tasklists with the placeholder tasks
+        write_json(TASKS_FILEPATH / "main.json", placeholder_tasks)
+        return
+
+    for tasklist in tasklists:
+        tasklist_path = Path(tasklist)
+        if not tasklist_path.exists():
+            logger.debug(
+                "Tasklist file wasn't found, set tasks to the starting tasklist."
+            )
+            write_json(tasklist_path, placeholder_tasks)
 
 
 def reset_files() -> None:
