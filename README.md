@@ -1,7 +1,8 @@
 # Nerrader's TaskCLI
-This version of a TaskCLI is a tool that was born out of necessity. I always had my own problems organizing and trying to remember my tasks and responsibilities, which led to an unorganized life, frequently forgetting deadlines and oftentimes doing things at the last minute which has caused me so much stress over the years.
+Nerrader's TaskCLI was a tool that was born out of necessity. I always had my own problems organizing and trying to remember my tasks and responsibilities, which has led to me frequently forgetting deadlines and oftentimes doing things at the last minute. Those problems have caused me so much mental stress amd fatigue over the years.
 
-So I made this tool to get rid of my mental clutter and organize my tasks more. So I can focus my time and energy on actually doing my tasks.
+So, I built this tool to get rid of my mental clutter by providing a way to better organize and track my responsibilities, so I can focus my time and energy on actually doing the work, rather than spending time worrying about what I might have forgotten.
+
 # Features
 
 - ### Core Features of a Task Manager
@@ -11,13 +12,13 @@ So I made this tool to get rid of my mental clutter and organize my tasks more. 
     This tool uses the `questionary` module to open up an interactive menu to customize the settings by typing out a command.
 
 - ### Local Storage
-    This tool does not require an internet connection to run. Meaning you can still manage and use all the features while being offline.
+    This tool does not require an internet connection to run. You can still manage and use all the features while being offline without drawbacks.
   
 - ### Logging
-    This tool uses the `loguru` module for logging and troubleshooting.
+    This tool uses the `loguru` module for logging and troubleshooting the app.
   
 - ### Additional Commands
-    This tool has some additional commands like `clear` to clear your entire tasklist, and `reset` to factory reset both your tasklist and configs, however the `reset` command is usually for if a critical bug happens and there is no other way to get the program to work.
+    This tool has some additional commands like `clear` to clear your entire tasklist, and `reset` to factory reset both your tasklist and configs.
 
 - ### Additional Task Attributes
     This tool has additional task attributes like priority, and duedates.
@@ -31,17 +32,16 @@ So I made this tool to get rid of my mental clutter and organize my tasks more. 
 2. Run the .exe file
 3. If Windows flags the .exe as unrecognized, click on **More Info > Run Anyway**
 
-    > _This happens because this tool is new and does not have a paid Certificate._
+    > _This happens because this tool is new and does not have a paid Certificate, as it would require me $200 to sign it._
     
 4. You're done!
 
 # How to Use
 
-You can give the program the command line arguments by going to the directory you downloaded the .exe on, and ...
-You can figure out most of the commands and how the overall usage works by just using --help.
+To use the CLI, open your terminal (Command Prompt or PowerShell) in the directory where you downloaded the .exe file, and run taskcli --help to see all available commands.
 
 > [!NOTE]
-> This tool creates a directory in AppData/Roaming/taskcli to store, and sometimes modfiy needed .json files for it to function.
+> This tool creates a directory in `AppData/Roaming/taskcli` to store and modfiy essential files for it to function.
 
 Here are the list of the main commands in the CLI, and their general purpose.
 Again, to find more about it's arguments and options and aliases, use --help to generate the help menu for that specific command.
@@ -75,14 +75,16 @@ Again, to find more about it's arguments and options and aliases, use --help to 
 > | Show Duedate Colors | True | If enabled, it will duedate colors during the listing of a task |
 > | Verbose Mode | False | Enables detailed logging for troubleshooting |
 
+> [!note]
+> The `current_tasklist` configuration is not acccessible in the settings and should not be modified manually in `config.json`, please use the `taskcli switch` command to update this setting.
+
 # Upcoming/Planned Features
 
 Here are some features that will be planned for future major/minor releases.
 
 - Undo/Redo commands
-- Adding, removing, and changing between different tasklists.
 - Adding task tags or groups.
-- Compatibility with other OS
+- Compatibility with other OSes
 
 # Contributing
 
@@ -90,7 +92,7 @@ This project welcomes all contributors, and whether you are fixing a bug, adding
 
 1. Fork this repository
 2. Clone this repository on your computer `https://github.com/[YOUR-USERNAME]/nerrader-taskcli-python.git`
-3. It is recommended that you make a seperate branch than the main branch `git switch -c feature/new-feature`, using `feature/` for new features, and `fix/` to fix a known issue/bug, just to name a few.
+3. It is recommended that you make a seperate branch than the main branch `git switch -c [NEW-BRANCH-NAME]`, using `feature/` for new features, and `fix/` to fix a known issue/bug, just to name a few.
 4. Use `uv sync` to automatically set up the virtual environment and grab all the dependencies for you.
 5. Commit your changes. Make sure your commit messages are clear and concise.
 6. Push changes to your fork of the repository
