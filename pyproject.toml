@@ -1,13 +1,9 @@
-[build-system]
-requires = ["hatchling>=1.26"]
-build-backend = "hatchling.build"
-
 [project]
 name = "taskcli"
 version = "1.1.0"
 description = "An easy to use taskcli for managing your tasks, built using python's typer library."
 readme = "README.md"
-requires-python = ">=3.14"
+requires-python = ">=3.10"
 dependencies = [
     "dateparser>=1.4.0",
     "loguru>=0.7.3",
@@ -27,13 +23,9 @@ dev = [
     "radon>=6.0.1",
     "ruff>=0.15.9",
     "types-dateparser>=1.4.0.20260408",
+    "vermin>=1.8.0",
     "vulture>=2.16",
 ]
 
-
 [project.scripts]
 taskcli = "taskcli.main:main"
-
-[tool.hatch.build.targets.wheel]
-packages = ["src/taskcli"]
-
