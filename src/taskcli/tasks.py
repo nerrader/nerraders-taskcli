@@ -373,9 +373,9 @@ class ListManager:
             raise ValueError(
                 f"Tasklist name is not valid as it is not a real tasklist: {tasklist_name}"
             )
-        if tasklist_name == "main":
+        if len(self.tasklists) == 1:
             raise ValueError(
-                "Cannot remove the main tasklist. If you want to change the name, use the rename command instead."
+                f"Cannot remove the {tasklist_name} tasklist as it would remove all the tasklists."
             )
         remove_file(storage.TASKS_FILEPATH / f"{tasklist_name}.json")
 
