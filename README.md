@@ -5,78 +5,64 @@ So, I built this tool to get rid of my mental clutter by providing a way to bett
 
 # Features
 
-- ### Core Features of a Task Manager
-    Adding, deleting, updating, marking, listing tasks are all here.
+- ### Core Features of a TaskCLI
+    **Adding, deleting, updating, marking, listing** tasks are all here.
 
 - ### Customizable Settings
-    This tool uses the `questionary` module to open up an interactive menu to customize the settings by typing out a command.
+    This tool uses the `questionary` module to open up an **interactive menu to customize the settings** by typing out a command.
 
 - ### Local Storage
-    This tool does not require an internet connection to run. You can still manage and use all the features while being offline without drawbacks.
+    This tool **does not require an internet connection** to run. You can still manage and use all the features while being **offline** without drawbacks.
   
 - ### Logging
-    This tool uses the `loguru` module for logging and troubleshooting the app.
+    This tool uses the `loguru` module for **logging and troubleshooting** the app.
   
 - ### Additional Commands
-    This tool has some additional commands like `clear` to clear your entire tasklist, and `reset` to factory reset both your tasklist and configs.
+    This tool has some additional commands like `clear` to **clear your entire tasklist**, and `reset` to **factory reset** both your tasklist and configs.
 
 - ### Additional Task Attributes
-    This tool has additional task attributes like priority, and duedates.
+    This tool has additional task attributes like **priority**, and **duedates**.
 
-# How to Download/Install
+- ### Tasklists
+    This tool allows for the adding, removing, renaming and switching of different tasklists, so you can group your tasks more easily.
 
-> [!NOTE]
-> Before using this tool, make sure you have: Windows 10 or more, as it doesn't work on other OSes.
+# How to Download & Use
 
-1. Download the latest .exe file from the latest [Release](https://github.com/nerrader/nerraders-mc-mod-downloader/releases)
-2. Run the .exe file
-3. If Windows flags the .exe as unrecognized, click on **More Info > Run Anyway**
+With these instructions, I am assuming you are using the **latest version of the tool** and that you have Windows 10 or above.
 
-    > _This happens because this tool is new and does not have a paid Certificate, as it would require me $200 to sign it._
-    
-4. You're done!
+1. **Download the .zip folder**, from the latest [release.](https://github.com/nerrader/nerrader-taskcli-python/releases)
+2. **Extract** the .zip folder.
+3. **Open your terminal** (Command Prompt or PowerShell) in the **folder containing the .exe.**
+4. Start running commands!
 
-# How to Use
+Here are some **quick commands** to get you to know how it works better:
+- `taskcli add get groceries`: Adds a task called 'get groceries' with ID 1
+- `taskcli list`: Lists the tasks table
+- `taskcli delete 1`: Removes a task with the ID 1, in this case its task "get groceries"
 
-To use the CLI, open your terminal (Command Prompt or PowerShell) in the directory where you downloaded the .exe file, and run taskcli --help to see all available commands.
+Use `--help` after any command to **find more about its arguments, options and aliases.**
 
-> [!NOTE]
-> This tool creates a directory in `AppData/Roaming/taskcli` to store and modfiy essential files for it to function.
-
-Here are the list of the main commands in the CLI, and their general purpose.
-Again, to find more about it's arguments and options and aliases, use --help to generate the help menu for that specific command.
+> [!tip]
+> You can also change the .exe file name to make it shorter.
+> So for example, you can change the file from `TaskCLI.exe` to `task.exe` which makes it so that you only have to type in `task list` instead.
+>
+> Also, make sure to check and configure your settings by using the `config` command, as defaults might be undesirable.
 
 #### Main TaskCLI Commands:
 | Command | Required Arguments | Description |
-| :--------: | :------------: | :---: |
+| :--------: | :------------ | :--- |
 | add | task_name | Adds a new task with that task name |
-| delete | task_id | Removes a specific task from your list based on its unique ID. |
-| update | task_id, updated_contents (name, priority, etc) | Updates that specific task with that unique task_id with the updated_contents |
-| mark | task_id, updated_status | Marks that specific task with that unique task_id with the new updated_status |
+| delete | task_id | Removes a specific task from your list based on the task ID. |
+| update | task_id, `updated-contents` | Updates with the updated_contents (e.g. name, priority) based on task ID |
+| mark | task_id, updated_status | Marks task with the new updated status based on task ID |
 | list | NONE | Lists all tasks in a table |
 | config | NONE | Opens up the main configuration menu |
 | clear | NONE | Asks the user for confirmation, then clears the tasklist |
 | reset | NONE | Asks the user for confirmation, then resets the tasklist and configs to factory defaults |
+| tasklist | `sub-command` | Manage multiple lists (add, remove, rename, switch) |
 
-> [!TIP] 
-> Make sure to check and configure your settings to your liking before starting the download process, as defaults might be undesirable.
->
-> #### Default Settings:
-> | Setting/Config | Default Value | Description |
-> | :--------: | :------------: | :---: |
-> | Visible Columns | [ID, Name, Status, Priority, Duedate] | Columns displayed in the task table |
-> | Default Priority | medium | The priority assigned to new tasks if the -p option is omitted. |
-> | Auto Clear Done Tasks | False | If enabled, tasks marked as done are automatically deleted. |
-> | Require Clear Confirmation | True | If enabled, requires confirmation before the clearing of a tasklist |
-> | Require Delete Confirmation | False | If enabled, requires confirmation before deletion of a task |
-> | Show Table Lines | True | If enabled, requires confirmation before deletion of a task |
-> | Show Status Colors | True | If enabled, it will show status colors during the listing of a task |
-> | Show Priority Colors | True | If enabled, it will priority colors during the listing of a task |
-> | Show Duedate Colors | True | If enabled, it will duedate colors during the listing of a task |
-> | Verbose Mode | False | Enables detailed logging for troubleshooting |
-
-> [!note]
-> The `current_tasklist` configuration is not acccessible in the settings and should not be modified manually in `config.json`, please use the `taskcli switch` command to update this setting.
+> [!NOTE]
+All data and logs are stored locally in `AppData/Roaming/taskcli`.
 
 # Upcoming/Planned Features
 
@@ -115,7 +101,7 @@ This project does use some python modules and packages to help with the developm
 
 ### Developer Dependencies
 - Mypy: For type checking and error catching.
-- Pip-aduit: For checking security vulnerabilities in packages.
+- Pip-audit: For checking security vulnerabilities in packages.
 - Pyinstaller: To make the distributable .exe file you are seeing in the releases.
 - Radon: To help with measuring CC and MI in my code.
 - Ruff: For code linting and formatting.
