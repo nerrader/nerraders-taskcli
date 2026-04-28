@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "taskcli"
-version = "1.0.0"
+version = "1.1.0"
 description = "An easy to use taskcli for managing your tasks, built using python's typer library."
 readme = "README.md"
 requires-python = ">=3.14"
