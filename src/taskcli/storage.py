@@ -3,13 +3,14 @@ import json
 import os
 from pathlib import Path
 from typing import Any
+from platformdirs import PlatformDirs
 
 from loguru import logger
 
-MAIN_FILEPATH: Path = (
-    Path(os.getenv("APPDATA", Path.home() / "AppData" / "Roaming")) / "taskcli"
-)
-CONFIG_FILEPATH: Path = MAIN_FILEPATH / "config.json"
+dirs = PlatformDirs("TaskCLI", appauthor="nerrader", roaming=True)
+
+MAIN_FILEPATH: Path = dirs.user_data_path
+CONFIG_FILEPATH: Path = dirs.user_config_path / "config.json"
 TASKS_FILEPATH: Path = MAIN_FILEPATH / "tasklists"
 
 # This file is for anything related to reading and writing to files in the main filepath
