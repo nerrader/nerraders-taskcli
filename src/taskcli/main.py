@@ -18,6 +18,7 @@ import typer
 from taskcli import tasks
 from taskcli import storage
 from taskcli import config
+from taskcli import __version__ as taskcli_version
 
 CUSTOM_THEME = Theme(
     {"error": "red", "success": "green", "info": "blue", "warning": "yellow"}
@@ -405,12 +406,15 @@ def reset_files():
         logger.success("Successfully reset app data files!")
 
 
-@app.callback()
+@app.callback(invoke_without_command=True)
 def initialize(
     context: typer.Context,
     verbose: Annotated[
         bool,
         typer.Option("--verbose", "-v", help="This flag enables verbose mode"),
+    ] = False,
+    version: Annotated[
+        bool, typer.Option("--version", "-V", help="Shows the version of the TaskCLI")
     ] = False,
 ) -> None:
     """TaskCLI: A tool to help organize and list your tasks"""
@@ -423,31 +427,42 @@ def initialize(
     #     context (typer.Context): Context object used by typer. You must use context.obj to store persistent values.
     #
 
+    if version:
+        print(f"v{taskcli_version}")
+        raise typer.Exit()
+
+    # for the app.log, always runs
     logger.remove()
     logger.add(
         storage.MAIN_FILEPATH / "app.log",
         rotation="00:00",
         retention=0,
         level="DEBUG",
-        format="{time:DD-MM-YYYY_HH:mm:ss} > {name}:{line} > {level}: {message} | {extra}",
+        format="{time:DD-MM-YYYY_HH:mm:ss} > {name}:{line} > {level}: {message}",
     )
 
     storage.check_storage(tasks.PLACEHOLDER_TASKS, config.Config.DEFAULT_CONFIG)
 
     context_config: config.Config = config.Config()
+    final_verbose_mode: bool = context_config.behaviour_settings.verbose_mode or verbose
+
+    logger.debug(f"Verbose mode is {final_verbose_mode}")
+
+    # this makes the user be able to see things in the terminal
+    if final_verbose_mode:
+        logger.debug(
+            f"Verbose mode enabled via {'config' if context_config.behaviour_settings.verbose_mode else 'CLI flag'}"
+        )
+        logger.add(
+            sys.stderr,
+            format="{time:DD-MM-YYYY_HH:mm:ss} > {name}:{line} > {level}: {message}",
+            level="DEBUG",
+        )
+
     task_manager: tasks.TasklistManager = tasks.TasklistManager(
         storage.TASKS_FILEPATH / f"{context_config.current_tasklist}.json"
     )
     tasklist_manager = tasks.ListManager(storage.TASKS_FILEPATH)
-    final_verbose_mode: bool = context_config.behaviour_settings.verbose_mode or verbose
-
-    logger.debug(f"Verbose mode is {final_verbose_mode}")
-    if final_verbose_mode:
-        logger.add(
-            sys.stderr,
-            format="{time:DD-MM-YYYY_HH:mm:ss} > {name}:{line} > {level}: {message} | {extra}",
-            level="DEBUG",
-        )
 
     context.obj = ContextObject(task_manager, tasklist_manager, context_config)
     logger.debug(
