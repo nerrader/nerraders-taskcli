@@ -114,3 +114,5 @@ This project does use some python modules and packages to help with the developm
 - Ruff: For code linting and formatting.
 - Types-dateparser: To enable mypy to scan dateparser types.
 - Vulture: For catching dead code
+- Vermin: For checking the minimum Python version requirements (pyproject.toml)
+- Platformdirs: To help with the Multi-OS Compatibility Feature.
