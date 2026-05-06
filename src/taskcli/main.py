@@ -8,8 +8,6 @@ from loguru import logger  # for logging
 import questionary  # for cli prompts (confirm/selection/checkbox)
 
 # rich things, for themes colors and tables
-from rich.theme import Theme
-from rich.console import Console
 from rich.table import Table
 
 # typer things
@@ -19,13 +17,11 @@ import typer
 from taskcli import tasks
 from taskcli import storage
 from taskcli import config
+from taskcli import constants as const
 from taskcli import __version__ as taskcli_version
 
-CUSTOM_THEME = Theme(
-    {"error": "red", "success": "green", "info": "blue", "warning": "yellow"}
-)
-CONSOLE = Console(theme=CUSTOM_THEME)
-print = CONSOLE.print
+
+print = const.CONSOLE.print
 app = typer.Typer()
 
 tasklist_command = typer.Typer()
@@ -309,7 +305,7 @@ def _get_styled_attribute(
             return styled_priority
         case "duedate":
             formatted_duedate, task_duedate_color = task.get_formatted_duedate()
-            return f"[{task_duedate_color}]{formatted_duedate}[/]"
+            return f"[{task_duedate_color if config.behaviour_settings.show_duedate_colors else 'white'}]{formatted_duedate}[/]"
         case _:
             raise ValueError(f"Not a valid attribute: '{attribute}'")
 
@@ -415,7 +411,7 @@ def reset_files(context: typer.Context) -> None:
     ).ask()
 
     if reset_confirm:
-        storage.reset_files(state.config.tasklists_dir_filepath, config.CONFIG_FILEPATH)
+        storage.reset_files(state.config.tasklists_dir_filepath, const.CONFIG_FILEPATH)
         print("Successfully reset files!", style="success")
         logger.success("Successfully reset app data files!")
 
@@ -454,7 +450,7 @@ def initialize(
     # for the app.log, always runs
     logger.remove()
     logger.add(
-        config.MAIN_FILEPATH / "app.log",
+        const.MAIN_FILEPATH / "app.log",
         rotation="00:00",
         retention=0,
         level="DEBUG",
@@ -481,8 +477,8 @@ def initialize(
 
     storage.check_storage(
         context_config.tasklists_dir_filepath,
-        config.CONFIG_FILEPATH,
-        tasks.PLACEHOLDER_TASKS,
+        const.CONFIG_FILEPATH,
+        const.PLACEHOLDER_TASKS,
         config.Config.DEFAULT_CONFIG,
     )
 

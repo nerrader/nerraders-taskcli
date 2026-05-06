@@ -4,18 +4,11 @@ from typing import Any
 
 import questionary
 from loguru import logger
-from platformdirs import PlatformDirs
 
 from taskcli import storage
-from taskcli import tasks
+from taskcli import constants as const
 
 # This file is for everything related to configs
-
-dirs = PlatformDirs("TaskCLI", appauthor="nerrader", roaming=True)
-
-MAIN_FILEPATH: Path = dirs.user_data_path
-CONFIG_FILEPATH: Path = dirs.user_config_path / "config.json"
-LOG_FILEPATH = MAIN_FILEPATH / "app.log"
 
 
 @dataclass
@@ -55,7 +48,7 @@ class Config:
         "visible_columns": ["ID", "Name", "Status", "Priority"],
         "default_priority": "medium",
         "current_tasklist": "main",
-        "tasklists_dir_filepath": MAIN_FILEPATH / "tasklists",
+        "tasklists_dir_filepath": const.MAIN_FILEPATH / "tasklists",
         "behaviour_settings": {
             "auto_clear_done_tasks": False,
             "require_clear_confirmation": True,
@@ -122,7 +115,7 @@ class Config:
     def default_priority(self, new_default: str):
         if (
             not isinstance(new_default, str)
-            or new_default not in tasks.Task.VALID_PRIORITIES
+            or new_default not in const.VALID_PRIORITIES
         ):
             logger.error(
                 f"The new default priority was not set as it wasn't valid: {new_default}"
@@ -137,7 +130,7 @@ class Config:
         return self._behaviour_settings
 
     def load_configs(self) -> dict:
-        config_json: dict = storage.load_json(CONFIG_FILEPATH)
+        config_json: dict = storage.load_json(const.CONFIG_FILEPATH)
         return config_json
 
     # pretty self explanatory i think
@@ -149,7 +142,7 @@ class Config:
             "tasklists_dir_filepath": str(self.tasklists_dir_filepath),
             "behaviour_settings": asdict(self._behaviour_settings),
         }
-        storage.write_json(CONFIG_FILEPATH, data)
+        storage.write_json(const.CONFIG_FILEPATH, data)
         logger.success("Successfully saved configs")
 
     def _configure_table_column_visibility(self) -> None:

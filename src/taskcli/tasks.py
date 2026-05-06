@@ -1,23 +1,22 @@
 from datetime import datetime as dt
 from pathlib import Path
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from dateparser import parse as dateparser
 from loguru import logger
 
-from taskcli import config
 from taskcli import storage
+from taskcli import constants as const
 
 # This file is for everything related to tasks.
 
-PLACEHOLDER_TASKS: dict[str, Any] = {"next_id": 1, "tasklist": []}
+
+if TYPE_CHECKING:
+    from taskcli import config
 
 
 class Task:
     """The task class, created when adding a task (for now it just immediately converts it to a dict though)"""
-
-    VALID_PRIORITIES: tuple[str, str, str, str] = ("low", "medium", "high", "urgent")
-    VALID_STATUSES: tuple[str, str, str, str] = ("on-hold", "todo", "doing", "done")
 
     # function rehydrate_loaded_tasks is the reason why we cant just remove the status from here
     def __init__(
@@ -369,7 +368,7 @@ def add_tasklist(tasklist_name: str, tasklist_directory: Path) -> None:
         tasklist_directory (Path): The directory where you store the tasklists.
     """
     tasklist_path = tasklist_name / tasklist_directory
-    storage.write_json(tasklist_path, PLACEHOLDER_TASKS)
+    storage.write_json(tasklist_path, const.PLACEHOLDER_TASKS)
 
 
 def delete_tasklist(tasklist_name: str, tasklist_directory: Path) -> None:
