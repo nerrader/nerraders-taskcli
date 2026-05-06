@@ -1,5 +1,6 @@
 from datetime import datetime as dt
 from dataclasses import dataclass
+from pathlib import Path
 import sys  # we import sys for stderr for loguru specifically
 from typing import Annotated
 
@@ -33,9 +34,10 @@ app.add_typer(tasklist_command, name="tasklist")
 
 @dataclass
 class ContextObject:
-    task_manager: tasks.TasklistManager
-    tasklist_manager: tasks.ListManager
     config: config.Config
+    tasklist: list[tasks.Task]
+    tasklist_next_id: int
+    tasklist_filepath: Path
 
 
 @app.command("add")
@@ -76,7 +78,7 @@ def add_task(
     joined_name: str = (" ".join(name)).strip()
     parsed_duedate: dt | None = None
     if duedate:
-        parsed_duedate = state.task_manager.parse_duedate(duedate)
+        parsed_duedate = tasks.parse_duedate(duedate)
 
     # the add_task function will deal with the missing values themselves
     logger.debug(
@@ -88,20 +90,22 @@ def add_task(
             "duedate": parsed_duedate,
         },
     )
-    new_task = state.task_manager.add_task(
+    state.tasklist_next_id, state.tasklist, new_task = tasks.add_task(
         joined_name,
+        state.tasklist_next_id,
+        state.tasklist,
         state.config,
         priority,
         status,
         parsed_duedate,
     )
     logger.success("Appended new task to the tasklist")
-    logger.debug(f"The new task contents: {new_task.to_dict()}")
     print(
         f"Successfully added new task '{new_task.name}' with ID {new_task.id} to the tasklist.",
         style="success",
     )
     display_tasks_table(context)
+    tasks.save_tasks(state.tasklist_filepath, state.tasklist, state.tasklist_next_id)
 
 
 @app.command("delete")
@@ -138,10 +142,12 @@ def delete_task(
         logger.info("Task deletion was cancelled")
         return
 
-    state.task_manager.delete_task(task_id)
+    state.tasklist = tasks.delete_task(state.tasklist, task_id)
     logger.success(f"Succesfully deleted task with ID {task_id}")
     print(f"Successfully deleted task with ID {task_id}", style="success")
     display_tasks_table(context)
+
+    tasks.save_tasks(state.tasklist_filepath, state.tasklist, state.tasklist_next_id)
 
 
 @app.command("update")
@@ -182,7 +188,7 @@ def update_task(
     parsed_updated_duedate = None
 
     if updated_duedate:
-        parsed_updated_duedate = state.task_manager.parse_duedate(updated_duedate)
+        parsed_updated_duedate = tasks.parse_duedate(updated_duedate)
 
     raw_updated_contents = {
         "name": joined_updated_name,
@@ -199,10 +205,14 @@ def update_task(
         },
     )
 
-    state.task_manager.update_task(task_id, raw_updated_contents)
+    state.tasklist = tasks.update_task(state.tasklist, task_id, raw_updated_contents)
+
+    # if it reaches here, that means no errors occured
     logger.success(f"Successfully updated task with ID {task_id}")
     print(f"Successfully updated task with ID {task_id}", style="success")
     display_tasks_table(context)
+
+    tasks.save_tasks(state.tasklist_filepath, state.tasklist, state.tasklist_next_id)
 
 
 @app.command("mark")
@@ -234,7 +244,7 @@ def mark_task(
     state: ContextObject = context.obj
 
     # dw, the task class setter will deal with invalid statuses
-    state.task_manager.mark_task(task_id, updated_status)
+    state.tasklist = tasks.mark_task(state.tasklist, task_id, updated_status)
     logger.success(
         f"Successfully updated task ID {task_id} with status {updated_status}"
     )
@@ -243,6 +253,8 @@ def mark_task(
         style="success",
     )
     display_tasks_table(context)
+
+    tasks.save_tasks(state.tasklist_filepath, state.tasklist, state.tasklist_next_id)
 
 
 def _get_styled_attribute(
@@ -307,7 +319,7 @@ def display_tasks_table(context: typer.Context) -> None:
     # literally just for the autocomplete really
     state: ContextObject = context.obj
 
-    if len(state.task_manager.tasklist) <= 0:
+    if len(state.tasklist) <= 0:
         print("There is nothing in the tasklist...", style="info")
         return
 
@@ -321,9 +333,9 @@ def display_tasks_table(context: typer.Context) -> None:
 
     # this auto clears all done tasks
     if state.config.behaviour_settings.auto_clear_done_tasks:
-        state.task_manager.clear_done_tasks()
+        tasks.clear_done_tasks(state.tasklist)
 
-    for task in state.task_manager.tasklist:
+    for task in state.tasklist:
         task_contents = [
             _get_styled_attribute(column_name, task, state.config)
             for column_name in state.config.visible_columns
@@ -339,8 +351,8 @@ def display_tasks_table(context: typer.Context) -> None:
 @app.command("ls", hidden=True)
 def list_tasks(context: typer.Context) -> None:
     """To list the tasks from the tasklist. Aliases: view | ls"""
+    # The actual CLI Command to list the rich table tasklist
     logger.info("User invoked 'list' command")
-    """The actual CLI Command to list the rich table tasklist"""
     display_tasks_table(context)
 
 
@@ -375,7 +387,7 @@ def clear_tasks(
         print("Tasklist clear cancelled", style="info")
         logger.info("Cancelled clearing of tasklist")
         return
-    state.task_manager.clear_tasklist()
+    tasks.save_tasks(state.tasklist_filepath, state.tasklist, state.tasklist_next_id)
     logger.success("Successfully cleared all tasks in tasklist!")
 
 
@@ -393,17 +405,25 @@ def config_cli(context: typer.Context) -> None:
 
 
 @app.command("reset")
-def reset_files():
+def reset_files(context: typer.Context) -> None:
     """Resets all the user data including the taskcli and configs, does not include logs."""
     logger.info("User invoked 'reset' command")
+
+    state: ContextObject = context.obj
     reset_confirm = questionary.confirm(
         "Are you sure you want to reset all your tasks and configs? NOTE: This won't reset app logs."
     ).ask()
 
     if reset_confirm:
-        storage.reset_files()
+        storage.reset_files(state.config.tasklists_dir_filepath, config.CONFIG_FILEPATH)
         print("Successfully reset files!", style="success")
         logger.success("Successfully reset app data files!")
+
+
+def get_tasklist_filepath(config: config.Config) -> Path:
+    return (config.tasklists_dir_filepath / config.current_tasklist).with_suffix(
+        ".json"
+    )
 
 
 @app.callback(invoke_without_command=True)
@@ -434,14 +454,12 @@ def initialize(
     # for the app.log, always runs
     logger.remove()
     logger.add(
-        storage.MAIN_FILEPATH / "app.log",
+        config.MAIN_FILEPATH / "app.log",
         rotation="00:00",
         retention=0,
         level="DEBUG",
         format="{time:DD-MM-YYYY_HH:mm:ss} > {name}:{line} > {level}: {message}",
     )
-
-    storage.check_storage(tasks.PLACEHOLDER_TASKS, config.Config.DEFAULT_CONFIG)
 
     context_config: config.Config = config.Config()
     final_verbose_mode: bool = context_config.behaviour_settings.verbose_mode or verbose
@@ -459,12 +477,18 @@ def initialize(
             level="DEBUG",
         )
 
-    task_manager: tasks.TasklistManager = tasks.TasklistManager(
-        storage.TASKS_FILEPATH / f"{context_config.current_tasklist}.json"
-    )
-    tasklist_manager = tasks.ListManager(storage.TASKS_FILEPATH)
+    tasklist_filepath = get_tasklist_filepath(context_config)
 
-    context.obj = ContextObject(task_manager, tasklist_manager, context_config)
+    storage.check_storage(
+        context_config.tasklists_dir_filepath,
+        config.CONFIG_FILEPATH,
+        tasks.PLACEHOLDER_TASKS,
+        config.Config.DEFAULT_CONFIG,
+    )
+
+    tasklist, next_id = tasks.initialize_tasks(tasklist_filepath)
+
+    context.obj = ContextObject(context_config, tasklist, next_id, tasklist_filepath)
     logger.debug(
         "App initialization done. Put all the variables needed in context.obj",
     )
@@ -484,8 +508,8 @@ def add_tasklist(
     logger.info("User invoked 'tasklist add' command.")
 
     joined_name: str = (" ".join(name)).strip()
-    state.tasklist_manager.add_tasklist(joined_name)
-    print(f"Successfully made a new tasklist: {joined_name}")
+    tasks.add_tasklist(joined_name, state.config.tasklists_dir_filepath)
+    print(f"\nSuccessfully made a new tasklist: {joined_name}\n")
     logger.success(f"Successfully made a new tasklist: {joined_name}")
 
 
@@ -504,8 +528,8 @@ def delete_tasklist(
     logger.info("User invoked 'tasklist delete' command.")
 
     joined_name: str = (" ".join(name)).strip()
-    state.tasklist_manager.delete_tasklist(joined_name)
-    print(f"Successfully deleted a tasklist: {joined_name}")
+    tasks.delete_tasklist(joined_name, state.config.tasklists_dir_filepath)
+    print(f"\nSuccessfully deleted a tasklist: {joined_name}\n")
     logger.success(f"Successfully deleted a tasklist: {joined_name}")
 
 
@@ -519,9 +543,11 @@ def rename_tasklist(
         str, typer.Argument(help="The new renamed name of the tasklist")
     ],
 ):
+    logger.info("User invoked 'tasklist rename' command.")
+
     state: ContextObject = context.obj  # just for the autocomplete really
-    state.tasklist_manager.rename_tasklist(old_name, new_name)
-    print(f"Successfully renamed tasklist into '{new_name}'")
+    tasks.rename_tasklist(old_name, new_name, state.config.tasklists_dir_filepath)
+    print(f"\nSuccessfully renamed tasklist into '{new_name}'\n")
     logger.success(f"Successfully renamed tasklist into '{new_name}'")
 
 
@@ -536,19 +562,14 @@ def switch_tasklists(
     state: ContextObject = context.obj  # just for the autocomplete really
 
     joined_name: str = (" ".join(name)).strip()
-    if joined_name not in state.tasklist_manager.tasklists:
+    if joined_name not in tasks.get_tasklists(state.config.tasklists_dir_filepath):
         raise ValueError(f"Invalid tasklist name, as it doesn't exist: {joined_name}")
 
     state.config.current_tasklist = joined_name
     state.config.save_config()
 
-    new_path = storage.TASKS_FILEPATH / f"{joined_name}.json"
-    state.task_manager = tasks.TasklistManager(new_path)
-
-    print(f"Switched to tasklist: {joined_name}.", style="info")
+    print(f"\nSwitched to tasklist: {joined_name}.\n", style="info")
     logger.info(f"User switch to tasklist '{joined_name}'")
-
-    display_tasks_table(context)
 
 
 @tasklist_command.command("list")
@@ -557,7 +578,7 @@ def switch_tasklists(
 def list_tasklists(context: typer.Context):
     state: ContextObject = context.obj  # just for the autocomplete really
 
-    for tasklist in state.tasklist_manager.tasklists:
+    for tasklist in tasks.get_tasklists(state.config.tasklists_dir_filepath):
         print(
             f"- {tasklist} {'(CURRENT)' if tasklist == state.config.current_tasklist else ''}"
         )
@@ -567,20 +588,20 @@ def main():
     try:
         app()
     except ValueError as error:
-        # These are usually the errors raised by your setters (invalid priority, etc.)
+        # These are usually errors raised by Task class setters (invalid priority, etc.)
         print(f"[bold red]Input Error:[/] {error}")
         logger.error(error)
-        sys.exit(1)
+        raise typer.Exit()
     except KeyboardInterrupt:
-        # Handles Ctrl+C gracefully without a messy traceback
+        # Handles Ctrl+C
         logger.debug("User did keyboard interrupt, operation cancelled")
         print("\n[yellow]Operation cancelled by user.[/]")
-        sys.exit(0)
+        raise typer.Exit()
     except Exception as error:
         logger.opt(exception=True).critical("The app crashed unexpectedly.")
         print(f"[bold red]CRITICAL ERROR:[/] {error}")
         print("[dim]Please check the app.log for a full traceback.[/]")
-        sys.exit(1)
+        raise typer.Exit()
 
 
 if __name__ == "__main__":
