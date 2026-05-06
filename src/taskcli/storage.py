@@ -1,17 +1,8 @@
-from glob import glob  # for resetting the .json files
 import json
-import os
 from pathlib import Path
 from typing import Any
-from platformdirs import PlatformDirs
 
 from loguru import logger
-
-dirs = PlatformDirs("TaskCLI", appauthor="nerrader", roaming=True)
-
-MAIN_FILEPATH: Path = dirs.user_data_path
-CONFIG_FILEPATH: Path = dirs.user_config_path / "config.json"
-TASKS_FILEPATH: Path = MAIN_FILEPATH / "tasklists"
 
 # This file is for anything related to reading and writing to files in the main filepath
 
@@ -33,21 +24,28 @@ def write_json(filepath: Path, data: Any) -> None:
         json.dump(data, file, indent=4, ensure_ascii=False)
 
 
-def check_storage(placeholder_tasks: dict, default_config: dict) -> None:
-    """checks if the files exist, if not it creates them and fills them with default data"""
+def check_storage(
+    tasks_dir_filepath: Path,
+    config_filepath: Path,
+    placeholder_tasks: dict,
+    default_config: dict,
+) -> None:
+    """checks if the files exist, if not it creates them and fills them with default data
+
+    i think args are pretty self explanatory"""
     logger.debug("Checking storage")
     # make both the main directory and tasks directory in the appdata if it doesn't exist
-    os.makedirs(TASKS_FILEPATH, exist_ok=True)
+    tasks_dir_filepath.mkdir(parents=True, exist_ok=True)
 
     # check if the files exist, if not create them and fill them with default data
-    if not CONFIG_FILEPATH.exists():
+    if not config_filepath.exists():
         logger.debug("Config file wasn't found, set configs to default")
-        write_json(CONFIG_FILEPATH, default_config)
+        write_json(config_filepath, default_config)
 
-    tasklists = glob(os.path.join(TASKS_FILEPATH, "*.json"))
+    tasklists = list(tasks_dir_filepath.glob("*.json"))
     if not tasklists:  # if empty
         # then create a main default tasklists with the placeholder tasks
-        write_json(TASKS_FILEPATH / "main.json", placeholder_tasks)
+        write_json(tasks_dir_filepath / "main.json", placeholder_tasks)
         return
 
     for tasklist in tasklists:
@@ -59,11 +57,17 @@ def check_storage(placeholder_tasks: dict, default_config: dict) -> None:
             write_json(tasklist_path, placeholder_tasks)
 
 
-def reset_files() -> None:
-    files_to_reset = glob(os.path.join(MAIN_FILEPATH, "*.json"))
-    if len(files_to_reset) <= 0:
-        print("There was nothing to reset.")
-    for file in files_to_reset:
-        os.remove(file)
+def reset_files(tasks_dir_filepath: Path, config_filepath: Path) -> None:
+    """Removes all files according to the filepaths list. This list should only contain the tasklists
+
+    Args:
+        tasks_dir_filepath (Path): The tasklists directory, where all the tasklist.json(s) are stored
+        config_filepath (Path): The config.json filepath
+    """
+    files_to_remove = list(tasks_dir_filepath.glob("*.json")) + [config_filepath]
+    for file in files_to_remove:
+        file.unlink(missing_ok=True)
         logger.debug(f"Deleted {file}")
-    logger.success("Successfully resetted tasklist and settings")
+    logger.success(
+        "Successfully resetted tasklist and settings. Files will be initialized on next launch."
+    )

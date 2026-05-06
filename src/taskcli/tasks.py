@@ -1,24 +1,22 @@
 from datetime import datetime as dt
 from pathlib import Path
-from typing import Any
-from os import remove as remove_file, rename as rename_file
+from typing import Any, TYPE_CHECKING
 
 from dateparser import parse as dateparser
 from loguru import logger
 
-from taskcli import config
 from taskcli import storage
+from taskcli import constants as const
 
 # This file is for everything related to tasks.
 
-PLACEHOLDER_TASKS: dict[str, Any] = {"next_id": 1, "tasklist": []}
+
+if TYPE_CHECKING:
+    from taskcli import config
 
 
 class Task:
     """The task class, created when adding a task (for now it just immediately converts it to a dict though)"""
-
-    VALID_PRIORITIES: tuple[str, str, str, str] = ("low", "medium", "high", "urgent")
-    VALID_STATUSES: tuple[str, str, str, str] = ("on-hold", "todo", "doing", "done")
 
     # function rehydrate_loaded_tasks is the reason why we cant just remove the status from here
     def __init__(
@@ -105,293 +103,315 @@ class Task:
         self._status = new_status
 
 
-class TasklistManager:
-    """This class should validate the tasks parameters before putting them in the tasks class, and also
-    do some other stuff to manipulate the tasklist correctly"""
+def find_target_task(target_id: int, tasklist: list[Task]) -> Task:
+    """Finds the target task according to the target id passed as an argument,
+    then sends the entire dictionary of the task with that ID
 
-    def __init__(self, tasklist_filepath) -> None:
-        data = storage.load_json(tasklist_filepath)
+    Raises:
+        ValueError: If target task was not found."""
+    target_task = next((task for task in tasklist if task.id == target_id), None)
+    if not target_task:
+        logger.debug(f"No target task found for {target_id}")
+        raise ValueError(f"Could not find task with ID {target_id}")
+    logger.debug("Found target task", task=target_task.to_dict())
+    return target_task
 
-        self.old_tasklist: list[dict[str, Any]] = data["tasklist"]
 
-        # rehydrating the python dictionaries into classes
-        self.tasklist: list[Task] = self._rehydrate_loaded_tasks()
-        self._tasklist_filepath = tasklist_filepath
-        self._next_id: int = data["next_id"]
+def parse_duedate(original_duedate: str) -> dt:
+    """Validates the duedate by running it through a dateparser function, and catching if it returns None.
 
-    @property
-    def next_id(self):
-        return self._next_id
+    Args:
+        original_duedate (str): The original string for the unparsed duedate
 
-    @property
-    def tasklist_filepath(self):
-        return self._tasklist_filepath
+    Returns:
+        (dt): The datetime object.
 
-    def increment_id(self):
-        self._next_id += 1
-        logger.debug("Incremented next ID by 1", current_next_id=self.next_id)
-
-    def reset_next_id(self) -> None:
-        """Should only be done in clear_tasklist()"""
-        self._next_id = 1
-        logger.info("Resetted next ID back to 1")
-
-    def find_target_task(self, target_id: int) -> Task:
-        """Finds the target task according to the target id passed as an argument,
-        then sends the entire dictionary of the task with that ID
-
-        Raises:
-            ValueError: If target task was not found."""
-        target_task = next(
-            (task for task in self.tasklist if task.id == target_id), None
+    Raises:
+        ValueError: If a duedate could not be parsed and it returns None, raise this error.
+    """
+    dateparse_settings = {
+        "DATE_ORDER": "MDY",
+        "RETURN_AS_TIMEZONE_AWARE": True,
+    }
+    parsed_duedate: dt | None = dateparser(
+        original_duedate, settings=dateparse_settings
+    )
+    if not parsed_duedate:
+        logger.error(f"Invalid duedate found: {original_duedate}. Setting to None.")
+        raise ValueError(
+            f"Invalid duedate string found: {original_duedate}. Setting to None.",
         )
-        if not target_task:
-            logger.debug(f"No target task found for {target_id}")
-            raise ValueError(f"Could not find task with ID {target_id}")
-        logger.debug("Found target task", task=target_task.to_dict())
-        return target_task
+    return parsed_duedate
 
-    def parse_duedate(self, original_duedate: str) -> dt:
-        """Validates the duedate by running it through a dateparser function, and catching if it returns None.
 
-        Args:
-            original_duedate (str): The original string for the unparsed duedate
+def add_task(
+    name: str,
+    next_id: int,
+    tasklist: list[Task],
+    configs: config.Config,
+    priority: str | None = None,
+    status: str | None = None,
+    duedate: dt | None = None,
+) -> tuple[int, list[Task], Task]:
+    """Adds a task to the tasklist, where the name and the priority provided will be the
+    attribute values for the task.
 
-        Returns:
-            (dt): The datetime object.
+    Returns (inside the tuple):
+        int: The next_id
+        list[Task]: The new and updated tasklist
+        Task: The new task that was created
+    """
+    # if no priority, set priority to default
+    if not priority:
+        logger.info("No priority found in add task function.", data=priority)
+        priority = configs.default_priority
+        logger.debug("Successfully set priority to default priority", data=priority)
+    if not status:
+        logger.info("No status found in add task function.")
+        status = "todo"
+        logger.debug("Successfully set status to 'todo' (default)", data=status)
 
-        Raises:
-            ValueError: If a duedate could not be parsed and it returns None, raise this error.
-        """
-        dateparse_settings = {
-            "DATE_ORDER": "MDY",
-            "RETURN_AS_TIMEZONE_AWARE": True,
-        }
-        parsed_duedate: dt | None = dateparser(
-            original_duedate, settings=dateparse_settings
-        )
-        if not parsed_duedate:
-            logger.error(f"Invalid duedate found: {original_duedate}. Setting to None.")
-            raise ValueError(
-                f"Invalid duedate string found: {original_duedate}. Setting to None.",
+    # duedate already parsed
+    new_task: Task = Task(
+        next_id,
+        name,
+        priority=priority,
+        status=status,
+        duedate=duedate,
+    )
+    # made a new variable so it doesnt modify the original one
+    updated_tasklist = tasklist + [new_task]
+
+    next_id += 1
+
+    return (next_id, updated_tasklist, new_task)
+
+
+def delete_task(tasklist: list[Task], task_id: int) -> list[Task]:
+    """Finds the task with the task_id in passed in using find_target_task(), then removes
+    it from the self.tasklist
+
+    Args:
+        task_id (int): The target ID
+    """
+    target_task = find_target_task(task_id, tasklist)
+
+    return [task for task in tasklist if task != target_task]
+
+
+def _validate_update_contents(
+    update_contents: dict[str, Any],
+) -> dict[str, Any]:
+    """
+    NOTE: THIS SHOULD ONLY BE USED ON FUNCTION update_task()
+
+    Validates and parses update contents, removing ones that are None
+
+    Args:
+        update_contents (dict[str, Any]): The updated contents to validate
+
+    Returns:
+        dict[str, Any]: The validated updated contents
+
+    Raises:
+        ValueError: If the new validated update contents were empty.
+    """
+
+    validated_update_contents = {
+        key: value for key, value in update_contents.items() if value
+    }
+    # do this later
+    if not validated_update_contents:
+        raise ValueError("There were no contents to update in the first place.")
+    # the checking if its a valid_priority will be done in the class itself using @property.setter
+    logger.debug("The validated update contents", contents=validated_update_contents)
+    return validated_update_contents
+
+
+def update_task(
+    tasklist: list[Task], task_id: int, updated_contents: dict[str, Any]
+) -> list[Task]:
+    """Updates tasks given the task_id and the updated_contents, updated_contents will be
+    put through the helper function _validate_update_contents(), to help validate and get rid of
+    unneccessary things in the updated_contents.
+
+    Args:
+        task_id (int): The task ID that is updated.
+        updated_contents (dict[str, Any]): The contents of the tasks that will be updated
+    """
+    # checks if the task_id exists
+    target_task = find_target_task(task_id, tasklist)
+
+    # the data for the new validated update contents
+    updated_contents = _validate_update_contents(updated_contents)
+
+    # now to finally update it
+    for key, value in updated_contents.items():
+        setattr(target_task, key, value)
+
+    # basically returns a new list with the task updated
+    return [target_task if task.id == task_id else task for task in tasklist]
+
+
+def mark_task(tasklist: list[Task], task_id: int, updated_status: str) -> list[Task]:
+    """Marks the targetted task with the new updated_status
+
+    Args:
+        task_id (int): The targetted task
+        updated_status (str): The new updated status
+
+    Returns:
+        list[Task]: The new and updated tasklist
+    """
+    target_task = find_target_task(task_id, tasklist)
+    target_task.status = updated_status
+
+    return [target_task if task.id == task_id else task for task in tasklist]
+
+
+def clear_tasklist() -> tuple[list, int]:
+    """Literally returns an empty list, and the next ID"""
+    return ([], 1)
+
+
+def clear_done_tasks(tasklist: list[Task]) -> list[Task]:
+    """clears all the done tasks, and saves them."""
+    return [task for task in tasklist if task.status != "done"]
+
+
+def load_tasks(tasklist_filepath) -> tuple[list[dict[str, Any]], int]:
+    data = storage.load_json(tasklist_filepath)
+    tasklist = data["tasklist"]
+    next_id = data["next_id"]
+    return (tasklist, next_id)
+
+
+# make it a docstring later, so basically it rehydrates those dictionaries into classes
+def rehydrate_loaded_tasks(unhydrated_tasklist: list[dict[str, Any]]) -> list[Task]:
+    """
+    NOTE: THIS SHOULD ONLY BE USED IN THE __init__ FUNCTION OF TASK MANAGER CLASS
+
+    Rehydrates and turns the loaded tasks from the tasklist.json into Task classes, as you cannot
+    save python classes into a .json file. Therefore, when you load the file, what comes out is a python
+    dictionary
+
+    Returns the rehydrated list of task classes.
+    """
+    # this will replace the dictionaries with task class objects
+    rehydrated_tasklist: list[Task] = []
+    for task in unhydrated_tasklist:
+        # Convert isostring back to datetime object
+        raw_date = task.get("duedate")
+        parsed_date = dt.fromisoformat(raw_date) if raw_date else None
+
+        rehydrated_tasklist.append(
+            Task(
+                task["id"],
+                task["name"],
+                priority=task["priority"],
+                status=task["status"],
+                duedate=parsed_date,
             )
-        return parsed_duedate
-
-    def add_task(
-        self,
-        name: str,
-        configs: config.Config,
-        priority: str | None = None,
-        status: str | None = None,
-        duedate: dt | None = None,
-    ) -> Task:
-        """Adds a task to the tasklist, where the name and the priority provided will be the
-        attribute values for the task.
-        """
-        # if no priority, set priority to default
-        if not priority:
-            logger.info("No priority found in add task function.", data=priority)
-            priority = configs.default_priority
-            logger.debug("Successfully set priority to default priority", data=priority)
-        if not status:
-            logger.info("No status found in add task function.")
-            status = "todo"
-            logger.debug("Successfully set status to 'todo' (default)", data=status)
-
-        # duedate already parsed
-        new_task: Task = Task(
-            self.next_id,
-            name,
-            priority=priority,
-            status=status,
-            duedate=duedate,
         )
-        self.tasklist.append(new_task)
+    logger.success("Rehydrated the tasklist with new task classes")
+    logger.debug(
+        f"Rehydrated tasklist: {[task.to_dict() for task in rehydrated_tasklist]}"
+    )
+    return rehydrated_tasklist
 
-        self.increment_id()
-        self.save_tasks()
 
-        return new_task
+def initialize_tasks(tasklist_filepath: Path) -> tuple[list[Task], int]:
+    """Initializes the tasklist by combining the load_tasks and rehydrate_loaded_tasks() functions.
 
-    def delete_task(self, task_id: int) -> None:
-        """Finds the task with the task_id in passed in using find_target_task(), then removes
-        it from the self.tasklist
+    Args:
+        tasklist_filepath (Path): The tasklist filepath
 
-        Args:
-            task_id (int): The target ID
-        """
-        target_task = self.find_target_task(task_id)
-        self.tasklist.remove(target_task)
-        self.save_tasks()
+    Returns (things in the tuple):
+        list[Task]: The new initialized tasklist
+        int: The next_id
+    """
+    logger.debug("Initializing tasks...")
+    tasklist, next_id = load_tasks(tasklist_filepath)
+    rehydrated_tasklist = rehydrate_loaded_tasks(tasklist)
 
-    def _validate_update_contents(
-        self,
-        update_contents: dict[str, Any],
-    ) -> dict[str, Any]:
-        """
-        MAY THIS ONLY BE USED ON FUNCTION update_task()
+    return (rehydrated_tasklist, next_id)
 
-        It validates the update contents, returns the ones where values are not none,
-        and returns a failed ResultManager if something is wrong.
 
-        Args:
-            update_contents (dict[str, Any]): The updated contents to validate
+def save_tasks(tasklist_filepath, tasklist: list[Task], next_id: int) -> None:
+    """Turns all the tasks into a dictionary, then saves all the tasks in the tasklist_filepath
+    (json file for storing tasks filepath)"""
 
-        Returns:
-            dict[str, str | dt]: The validated updated contents
+    # make the class objects dictionaries first
+    saved_tasklist = [task.to_dict() for task in tasklist]
+    storage.write_json(
+        tasklist_filepath,
+        {"next_id": next_id, "tasklist": saved_tasklist},
+    )
+    logger.success(f"Successfully saved tasks to {tasklist_filepath}")
 
-        Raises:
-            ValueError: If the new validated update contents were empty.
-        """
 
-        validated_update_contents = {
-            key: value for key, value in update_contents.items() if value
-        }
-        # do this later
-        if not validated_update_contents:
-            raise ValueError("There were no contents to update in the first place.")
-        # the checking if its a valid_priority will be done in the class itself using @property.setter
-        logger.debug(
-            "The validated update contents", contents=validated_update_contents
+def get_tasklists(taskslist_dir: Path) -> list[str]:
+    """Always returns a fresh list of available tasklist names from disk."""
+    return [file.stem for file in taskslist_dir.glob("*.json")]
+
+
+def resolve_tasklist_path(tasklist_dir: Path, name: str) -> Path:
+    """Returns the combined tasklist directory and name, ensuring a .json extension."""
+    return (tasklist_dir / name).with_suffix(".json")
+
+
+def add_tasklist(tasklist_name: str, tasklist_directory: Path) -> None:
+    """Adds a tasklist
+
+    Args:
+        tasklist_name (str): The new tasklist name added
+        tasklist_directory (Path): The directory where you store the tasklists.
+    """
+    tasklist_path = tasklist_name / tasklist_directory
+    storage.write_json(tasklist_path, const.PLACEHOLDER_TASKS)
+
+
+def delete_tasklist(tasklist_name: str, tasklist_directory: Path) -> None:
+    """Deletes a tasklist
+
+    Args:
+        tasklist_name (str): The name of the tasklist being deleted
+        tasklist_directory (Path): The directory where you store the tasklists
+
+    Raises:
+        ValueError: If the tasklist name is not apart of a real tasklist, raise this error.
+        ValueError: If removing this tasklist would mean that the user has no more tasklists, raise this error.
+    """
+    tasklists = get_tasklists(tasklist_directory)
+    tasklist_filepath = resolve_tasklist_path(tasklist_directory, tasklist_name)
+    if tasklist_name not in tasklists:
+        raise ValueError(
+            f"Tasklist name is not valid as it is not a real tasklist: {tasklist_name}"
         )
-        return validated_update_contents
-
-    def update_task(self, task_id: int, updated_contents: dict[str, Any]) -> None:
-        """Updates tasks given the task_id and the updated_contents, updated_contents will be
-        put through the helper function _validate_update_contents(), to help validate and get rid of
-        unneccessary things in the updated_contents.
-
-        Args:
-            task_id (int): The task ID that is updated.
-            updated_contents (dict[str, Any]): The contents of the tasks that will be updated using
-            self.tasklist.update(updated_contents)
-        """
-        # checks if the task_id exists
-        target_task = self.find_target_task(task_id)
-
-        # the data for the new validated update contents
-        updated_contents = self._validate_update_contents(updated_contents)
-
-        # now to finally update it
-        for key, value in updated_contents.items():
-            setattr(target_task, key, value)
-
-        self.save_tasks()
-
-    def mark_task(self, task_id: int, updated_status: str) -> None:
-        """Marks the targetted task with the new updated_status
-
-        Args:
-            task_id (int): The targetted task
-            updated_status (str): The new updated status
-        """
-        target_task = self.find_target_task(task_id)
-
-        target_task.status = updated_status
-        self.save_tasks()
-
-    def clear_tasklist(self) -> None:
-        self.tasklist = []
-        self.reset_next_id()
-        self.save_tasks()
-
-    def clear_done_tasks(self) -> None:
-        """clears all the done tasks, and saves them."""
-        self.tasklist = [task for task in self.tasklist if task.status != "done"]
-        self.save_tasks()
-
-    # make it a docstring later, so basically it rehydrates those dictionaries into classes
-    def _rehydrate_loaded_tasks(self) -> list[Task]:
-        """
-        NOTE: THIS SHOULD ONLY BE USED IN THE __init__ FUNCTION OF TASK MANAGER CLASS
-
-        Rehydrates and turns the loaded tasks from the tasklist.json into Task classes, as you cannot
-        save python classes into a .json file. Therefore, when you load the file, what comes out is a python
-        dictionary
-        """
-        # this will replace the dictionaries with task class objects
-        rehydrated_tasklist: list[Task] = []
-        for task in self.old_tasklist:
-            # Convert isostring back to datetime object
-            raw_date = task.get("duedate")
-            parsed_date = dt.fromisoformat(raw_date) if raw_date else None
-
-            rehydrated_tasklist.append(
-                Task(
-                    task["id"],
-                    task["name"],
-                    priority=task["priority"],
-                    status=task["status"],
-                    duedate=parsed_date,
-                )
-            )
-        logger.success("Rehydrated the tasklist with new task classes")
-        logger.debug(
-            "Rehydrated tasklist",
-            rehydrated_tasklist=[task.to_dict() for task in rehydrated_tasklist],
+    if len(tasklists) == 1:
+        raise ValueError(
+            f"Cannot remove the {tasklist_name} tasklist as it would remove all the tasklists."
         )
-        return rehydrated_tasklist
+    tasklist_filepath.unlink()
 
-    def save_tasks(self) -> None:
-        """Turns all the tasks into a dictionary, then saves all the tasks in storage.TASKS_FILEPATH
-        (json file for storing tasks filepath)"""
 
-        # make the class objects dictionaries first
-        saved_tasklist = [task.to_dict() for task in self.tasklist]
-        storage.write_json(
-            self.tasklist_filepath,
-            {"next_id": self.next_id, "tasklist": saved_tasklist},
+def rename_tasklist(
+    old_tasklist_name: str,
+    new_tasklist_name: str,
+    tasklist_directory: Path,
+) -> None:
+    """Renames a tasklist called old_tasklist_name to new_tasklist_name
+
+    i feel like args are self explanatory
+
+    Raises:
+        ValueError: If the old_tasklist_name does not exist, raise this error.
+    """
+    if old_tasklist_name not in get_tasklists(tasklist_directory):
+        raise ValueError(
+            f"Tasklist name is not valid as it is not a real tasklist: {old_tasklist_name}"
         )
-        logger.success(f"Successfully saved tasks to {self.tasklist_filepath}")
 
-
-class ListManager:
-    def __init__(self, base_dir: Path) -> None:
-        self.base_dir: Path = base_dir
-
-    @property
-    def tasklists(self) -> list[str]:
-        """Always returns a fresh list of available tasklists from disk."""
-        return [file.stem for file in self.base_dir.glob("*.json")]
-
-    def check_exists(self, target_tasklist: str) -> bool:
-        """Checks if the tasklist exists
-
-        Args:
-            target_tasklist (str): The name of the tasklist being checked
-
-        Returns:
-            bool: If it exists, it is True, else it is False.
-        """
-        return target_tasklist in self.tasklists
-
-    def add_tasklist(self, tasklist_name: str) -> None:
-        storage.write_json(self.base_dir / f"{tasklist_name}.json", PLACEHOLDER_TASKS)
-
-    def delete_tasklist(self, tasklist_name: str) -> None:
-        if not self.check_exists(tasklist_name):
-            raise ValueError(
-                f"Tasklist name is not valid as it is not a real tasklist: {tasklist_name}"
-            )
-        if len(self.tasklists) == 1:
-            raise ValueError(
-                f"Cannot remove the {tasklist_name} tasklist as it would remove all the tasklists."
-            )
-        remove_file(storage.TASKS_FILEPATH / f"{tasklist_name}.json")
-
-    def rename_tasklist(self, old_tasklist_name: str, new_tasklist_name: str) -> None:
-        """Renames a tasklist called old_tasklist_name to new_tasklist_name
-
-        i feel like args are self explanatory
-
-        Raises:
-            ValueError: If the old_tasklist_name does not exist, raise this error.
-        """
-        if not self.check_exists(old_tasklist_name):
-            raise ValueError(
-                f"Tasklist name is not valid as it is not a real tasklist: {old_tasklist_name}"
-            )
-        rename_file(
-            storage.TASKS_FILEPATH / f"{old_tasklist_name}.json",
-            storage.TASKS_FILEPATH / f"{new_tasklist_name}.json",
-        )
+    resolve_tasklist_path(tasklist_directory, old_tasklist_name).rename(
+        resolve_tasklist_path(tasklist_directory, new_tasklist_name)
+    )

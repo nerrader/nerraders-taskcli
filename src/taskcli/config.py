@@ -1,11 +1,12 @@
 from dataclasses import dataclass, asdict, fields
+from pathlib import Path
 from typing import Any
 
 import questionary
 from loguru import logger
 
 from taskcli import storage
-from taskcli import tasks
+from taskcli import constants as const
 
 # This file is for everything related to configs
 
@@ -47,6 +48,7 @@ class Config:
         "visible_columns": ["ID", "Name", "Status", "Priority"],
         "default_priority": "medium",
         "current_tasklist": "main",
+        "tasklists_dir_filepath": const.MAIN_FILEPATH / "tasklists",
         "behaviour_settings": {
             "auto_clear_done_tasks": False,
             "require_clear_confirmation": True,
@@ -65,6 +67,7 @@ class Config:
         self._visible_columns: list[str] = data["visible_columns"]
         self._default_priority: str = data["default_priority"]
         self.current_tasklist: str = data["current_tasklist"]
+        self.tasklists_dir_filepath: Path = Path(data["tasklists_dir_filepath"])
         self._behaviour_settings: BehaviourConfig = BehaviourConfig(
             **data["behaviour_settings"]
         )
@@ -112,7 +115,7 @@ class Config:
     def default_priority(self, new_default: str):
         if (
             not isinstance(new_default, str)
-            or new_default not in tasks.Task.VALID_PRIORITIES
+            or new_default not in const.VALID_PRIORITIES
         ):
             logger.error(
                 f"The new default priority was not set as it wasn't valid: {new_default}"
@@ -127,7 +130,7 @@ class Config:
         return self._behaviour_settings
 
     def load_configs(self) -> dict:
-        config_json: dict = storage.load_json(storage.CONFIG_FILEPATH)
+        config_json: dict = storage.load_json(const.CONFIG_FILEPATH)
         return config_json
 
     # pretty self explanatory i think
@@ -136,9 +139,10 @@ class Config:
             "visible_columns": self._visible_columns,
             "default_priority": self._default_priority,
             "current_tasklist": self.current_tasklist,
+            "tasklists_dir_filepath": str(self.tasklists_dir_filepath),
             "behaviour_settings": asdict(self._behaviour_settings),
         }
-        storage.write_json(storage.CONFIG_FILEPATH, data)
+        storage.write_json(const.CONFIG_FILEPATH, data)
         logger.success("Successfully saved configs")
 
     def _configure_table_column_visibility(self) -> None:
@@ -185,6 +189,30 @@ class Config:
             logger.info("User cancelled default priority changes")
         return
 
+    def _configure_tasklist_filepath(self) -> None:
+        """NOTE: THIS SHOULD ONLY BE USED ON main_configuration_ui()
+
+        Configures the tasklist filepath directory used to store your tasklists, using questionary.path()
+        to ask the user where to store it.
+        """
+        logger.debug("User navigated to the configure tasklist filepath menu")
+        print("TIP: You can press the 'Tab' key for autocomplete.")
+        print(
+            "TIP: You can go into file explorer and copy and paste the path there instead."
+        )
+        new_tasklist_filepath = questionary.path(
+            "What should the new folderpath be for storing your tasklists? (Press Tab for Autocomplete)",
+            only_directories=True,
+        ).ask()
+
+        # checks for ctrl + c, because it returns none if it got cancelled
+        if new_tasklist_filepath:
+            self.tasklist_filepath = Path(new_tasklist_filepath)
+            logger.info(f"User changed default priority to {new_tasklist_filepath}")
+        else:
+            logger.info("User cancelled default priority changes")
+        return
+
     def _configure_behaviour_settings(self) -> None:
         """NOTE: THIS SHOULD ONLY BE USED ON main_configuration_ui()
 
@@ -227,6 +255,8 @@ class Config:
         defaults = self.DEFAULT_CONFIG
         self.visible_columns: list[str] = defaults["visible_columns"]
         self.default_priority: str = defaults["default_priority"]
+        self.current_tasklist = defaults["current_tasklist"]
+        self.tasklist_filepath = defaults["tasklists_dir_filepath"]
         self._behaviour_settings = BehaviourConfig(**defaults["behaviour_settings"])
         logger.info("User has reset the configuration settings back to default.")
 
