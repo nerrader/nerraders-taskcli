@@ -38,19 +38,28 @@ With these instructions, I am assuming you are using the **latest version of the
 3. **Open your terminal**, and navigate to the **folder containing the .exe.**
 4. Start running commands!
 
+### Quick Usage
 Here are some **quick commands** to get you to know how it works better:
+```bash
+taskcli add get groceries
+```
+This command **adds a task** called 'get groceries' with ID 1
+```bash
+taskcli list
+```
+This command **lists the table** of tasks that you currently have.
+```bash
+taskcli delete 1
+```
+This command **removes the task with ID 1**, which in this case is the task we just created called 'get groceries'
 
-- `taskcli add get groceries`: Adds a task called 'get groceries' with ID 1
-- `taskcli list`: Lists the tasks table
-- `taskcli delete 1`: Removes a task with the ID 1, in this case its task "get groceries"
-
-Use `--help` after any command to find more about its arguments, options and aliases.
+Use `--help` after any command to find more about the **command's arguments, options and aliases.**
 
 > [!tip]
-> You can also change the .exe file name to make it shorter.
+> You can also change the .exe file name to make it **shorter.**
 > So for example, you can change the file from `TaskCLI.exe` to `task.exe` which makes it so that you only have to type in `task list` instead.
 >
-> Also, make sure to check and configure your settings by using the `config` command, as defaults might be undesirable.
+> Also, make sure to **check and configure your settings** by using the `config` command, as **defaults might be undesirable.**
 
 #### Main TaskCLI Commands:
 
@@ -71,18 +80,28 @@ Use `--help` after any command to find more about its arguments, options and ali
 
 # Upcoming/Planned Features
 
-Here are some features that will be planned for future major/minor releases.
+Here are some features that will be planned for **future major/minor releases** of the TaskCLI.
 
 - Undo/Redo commands
 - Adding task tags or groups.
+- Bulk modifying tasks (e.g. bulk removing, bulk marking, etc)
+- List filtering and sorting
+- More settings
 
 # Contributing
 
 This project welcomes all contributors, and whether you are fixing a bug, adding a new feature, or just improving the documentation of this project, you can get started by just following these steps:
 
 1. Fork this repository
-2. Clone this repository on your computer `https://github.com/[YOUR-USERNAME]/nerrader-taskcli-python.git`
-3. It is recommended that you make a seperate branch than the main branch `git switch -c [NEW-BRANCH-NAME]`, using `feature/` for new features, and `fix/` to fix a known issue/bug, just to name a few.
+2. Clone this repository on your computer 
+```bash
+git clone https://github.com/[YOUR-USERNAME]/nerrader-taskcli-python.git
+```
+3. It is recommended that you make a seperate branch than the main branch `git switch -c [NEW-BRANCH-NAME]`, 
+```bash
+git switch -c [NEW-BRANCH-NAME]
+```
+Branches should start with a branch prefix such as `feature/` for new features, and `fix/` to fix a known issue/bug, just to name a few.
 4. Use `uv sync` to automatically set up the virtual environment and grab all the dependencies for you.
 5. Commit your changes. Make sure your commit messages are clear and concise.
 6. Push changes to your fork of the repository
@@ -91,11 +110,11 @@ This project welcomes all contributors, and whether you are fixing a bug, adding
 > [!IMPORTANT]
 > Please make sure your code works properly before submitting. Follow PEP 8 guidelines, maintain consistent styling, and include type annotations and documentation for any new functions.
 
-By contributing this project, you agree that your contribution will be licensed under the MIT License.
+By contributing this project, you agree that your contribution will be **licensed under the MIT License.**
 
 # Project Module Technical Stack
 
-This project does use some python modules and packages to help with the development process. So I thought it would be helpful If I documented them here:
+This project does use some external python modules and packages to help with the development process. So I thought it would be helpful If I documented them here:
 
 ### Main Project Dependencies
 
