@@ -9,6 +9,7 @@ from taskcli import storage
 from taskcli import constants as const
 
 # This file is for everything related to configs
+print = const.CONSOLE.print
 
 
 @dataclass
@@ -48,7 +49,7 @@ class Config:
         "visible_columns": ["ID", "Name", "Status", "Priority"],
         "default_priority": "medium",
         "current_tasklist": "main",
-        "tasklists_dir_filepath": const.MAIN_FILEPATH / "tasklists",
+        "tasklists_dir_filepath": str(const.MAIN_FILEPATH / "tasklists"),
         "behaviour_settings": {
             "auto_clear_done_tasks": False,
             "require_clear_confirmation": True,
@@ -168,7 +169,6 @@ class Config:
             logger.info(f"Changed visible columns: {new_visible_columns}")
         else:
             logger.info("User cancelled visible columns change")
-        return
 
     def _configre_default_priority(self) -> None:
         """NOTE: THIS SHOULD ONLY BE USED ON main_configuration_ui()
@@ -187,7 +187,6 @@ class Config:
             logger.info(f"User changed default priority to {new_default_priority}")
         else:
             logger.info("User cancelled default priority changes")
-        return
 
     def _configure_tasklist_filepath(self) -> None:
         """NOTE: THIS SHOULD ONLY BE USED ON main_configuration_ui()
@@ -196,22 +195,24 @@ class Config:
         to ask the user where to store it.
         """
         logger.debug("User navigated to the configure tasklist filepath menu")
-        print("TIP: You can press the 'Tab' key for autocomplete.")
+        print("TIP: You can press the 'Tab' key for autocomplete.", style="info")
         print(
-            "TIP: You can go into file explorer and copy and paste the path there instead."
+            "TIP: You can go into file explorer and copy and paste the path there instead.",
+            style="info",
         )
         new_tasklist_filepath = questionary.path(
-            "What should the new folderpath be for storing your tasklists? (Press Tab for Autocomplete)",
+            "What should the new folderpath be for storing your tasklists?",
             only_directories=True,
         ).ask()
 
         # checks for ctrl + c, because it returns none if it got cancelled
         if new_tasklist_filepath:
-            self.tasklist_filepath = Path(new_tasklist_filepath)
-            logger.info(f"User changed default priority to {new_tasklist_filepath}")
+            self.tasklists_dir_filepath = Path(new_tasklist_filepath)
+            logger.info(
+                f"User changed the tasklist folderpath to {new_tasklist_filepath}"
+            )
         else:
-            logger.info("User cancelled default priority changes")
-        return
+            logger.info("User cancelled tasklist folderpath changes")
 
     def _configure_behaviour_settings(self) -> None:
         """NOTE: THIS SHOULD ONLY BE USED ON main_configuration_ui()
@@ -256,7 +257,7 @@ class Config:
         self.visible_columns: list[str] = defaults["visible_columns"]
         self.default_priority: str = defaults["default_priority"]
         self.current_tasklist = defaults["current_tasklist"]
-        self.tasklist_filepath = defaults["tasklists_dir_filepath"]
+        self.tasklists_dir_filepath = defaults["tasklists_dir_filepath"]
         self._behaviour_settings = BehaviourConfig(**defaults["behaviour_settings"])
         logger.info("User has reset the configuration settings back to default.")
 
@@ -272,6 +273,7 @@ class Config:
                 choices=(
                     "Table Column Visibility",
                     "Default Task Priority",
+                    "Change Tasklists Folder",
                     "Other Behaviour Settings",
                     questionary.Separator(),
                     "Exit and Save",
@@ -285,6 +287,8 @@ class Config:
                     self._configure_table_column_visibility()
                 case "Default Task Priority":
                     self._configre_default_priority()
+                case "Change Tasklists Folder":
+                    self._configure_tasklist_filepath()
                 case "Other Behaviour Settings":
                     self._configure_behaviour_settings()
                 case "Exit and Save":

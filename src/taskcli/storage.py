@@ -24,11 +24,21 @@ def write_json(filepath: Path, data: Any) -> None:
         json.dump(data, file, indent=4, ensure_ascii=False)
 
 
-def check_storage(
+def check_config_file(
+    config_dir: Path, config_filepath: Path, default_config: dict[str, Any]
+):
+    logger.debug("Checking storage for the config file")
+
+    if not config_filepath.exists():
+        config_dir.mkdir(parents=True, exist_ok=True)
+        write_json(config_filepath, default_config)
+
+        logger.debug("Config file wasn't found, set configs to default")
+
+
+def check_tasklists(
     tasks_dir_filepath: Path,
-    config_filepath: Path,
     placeholder_tasks: dict,
-    default_config: dict,
 ) -> None:
     """checks if the files exist, if not it creates them and fills them with default data
 
@@ -38,23 +48,10 @@ def check_storage(
     tasks_dir_filepath.mkdir(parents=True, exist_ok=True)
 
     # check if the files exist, if not create them and fill them with default data
-    if not config_filepath.exists():
-        logger.debug("Config file wasn't found, set configs to default")
-        write_json(config_filepath, default_config)
-
     tasklists = list(tasks_dir_filepath.glob("*.json"))
     if not tasklists:  # if empty
         # then create a main default tasklists with the placeholder tasks
         write_json(tasks_dir_filepath / "main.json", placeholder_tasks)
-        return
-
-    for tasklist in tasklists:
-        tasklist_path = Path(tasklist)
-        if not tasklist_path.exists():
-            logger.debug(
-                "Tasklist file wasn't found, set tasks to the starting tasklist."
-            )
-            write_json(tasklist_path, placeholder_tasks)
 
 
 def reset_files(tasks_dir_filepath: Path, config_filepath: Path) -> None:

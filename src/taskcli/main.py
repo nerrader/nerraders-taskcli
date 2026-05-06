@@ -457,15 +457,21 @@ def initialize(
         format="{time:DD-MM-YYYY_HH:mm:ss} > {name}:{line} > {level}: {message}",
     )
 
-    context_config: config.Config = config.Config()
-    final_verbose_mode: bool = context_config.behaviour_settings.verbose_mode or verbose
+    storage.check_config_file(
+        const._dirs.user_config_path,
+        const.CONFIG_FILEPATH,
+        config.Config.DEFAULT_CONFIG,
+    )
+
+    loaded_config: config.Config = config.Config()
+    final_verbose_mode: bool = loaded_config.behaviour_settings.verbose_mode or verbose
 
     logger.debug(f"Verbose mode is {final_verbose_mode}")
 
     # this makes the user be able to see things in the terminal
     if final_verbose_mode:
         logger.debug(
-            f"Verbose mode enabled via {'config' if context_config.behaviour_settings.verbose_mode else 'CLI flag'}"
+            f"Verbose mode enabled via {'config' if loaded_config.behaviour_settings.verbose_mode else 'CLI flag'}"
         )
         logger.add(
             sys.stderr,
@@ -473,18 +479,15 @@ def initialize(
             level="DEBUG",
         )
 
-    tasklist_filepath = get_tasklist_filepath(context_config)
+    tasklist_filepath = get_tasklist_filepath(loaded_config)
 
-    storage.check_storage(
-        context_config.tasklists_dir_filepath,
-        const.CONFIG_FILEPATH,
-        const.PLACEHOLDER_TASKS,
-        config.Config.DEFAULT_CONFIG,
+    storage.check_tasklists(
+        loaded_config.tasklists_dir_filepath, const.PLACEHOLDER_TASKS
     )
 
     tasklist, next_id = tasks.initialize_tasks(tasklist_filepath)
 
-    context.obj = ContextObject(context_config, tasklist, next_id, tasklist_filepath)
+    context.obj = ContextObject(loaded_config, tasklist, next_id, tasklist_filepath)
     logger.debug(
         "App initialization done. Put all the variables needed in context.obj",
     )

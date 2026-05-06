@@ -82,10 +82,14 @@ class Task:
 
     @priority.setter
     def priority(self, new_priority):
-        new_priority = new_priority.strip().lower().replace(" ", "")
-        if new_priority not in self.VALID_PRIORITIES:
+        if not isinstance(new_priority, str):
             raise ValueError(
-                f"'{new_priority}' is not a valid priority. Must be one of {self.VALID_PRIORITIES}"
+                f"'{new_priority}' is not a valid priority. Must be one of {const.VALID_PRIORITIES}"
+            )
+        new_priority = new_priority.strip().lower().replace(" ", "")
+        if new_priority not in const.VALID_PRIORITIES:
+            raise ValueError(
+                f"'{new_priority}' is not a valid priority. Must be one of {const.VALID_PRIORITIES}"
             )
         self._priority = new_priority
 
@@ -95,10 +99,14 @@ class Task:
 
     @status.setter
     def status(self, new_status):
-        new_status = new_status.strip().lower().replace(" ", "")
-        if new_status not in self.VALID_STATUSES:
+        if not isinstance(new_status, str):
             raise ValueError(
-                f"'{new_status}' is not a valid status. Must be one of {self.VALID_STATUSES}"
+                f"'{new_status}' is not a valid status. Must be one of {const.VALID_STATUSES}"
+            )
+        new_status = new_status.strip().lower().replace(" ", "")
+        if new_status not in const.VALID_STATUSES:
+            raise ValueError(
+                f"'{new_status}' is not a valid status. Must be one of {const.VALID_STATUSES}"
             )
         self._status = new_status
 
