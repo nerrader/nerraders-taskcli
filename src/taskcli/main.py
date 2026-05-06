@@ -329,7 +329,7 @@ def display_tasks_table(context: typer.Context) -> None:
 
     # this auto clears all done tasks
     if state.config.behaviour_settings.auto_clear_done_tasks:
-        tasks.clear_done_tasks(state.tasklist)
+        state.tasklist = tasks.clear_done_tasks(state.tasklist)
 
     for task in state.tasklist:
         task_contents = [
