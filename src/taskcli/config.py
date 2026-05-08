@@ -1,3 +1,4 @@
+from copy import deepcopy
 from dataclasses import dataclass, asdict, fields
 from pathlib import Path
 from typing import Any
@@ -203,6 +204,11 @@ class Config:
         new_tasklist_filepath = questionary.path(
             "What should the new folderpath be for storing your tasklists?",
             only_directories=True,
+            validate=lambda filepath: (
+                Path(filepath).is_dir()
+                if filepath
+                else "Please enter a valid directory."
+            ),
         ).ask()
 
         # checks for ctrl + c, because it returns none if it got cancelled
@@ -220,7 +226,7 @@ class Config:
         Configures the behaviour settings using questionary.checkbox()
         """
         logger.debug("User navigated to the configure behaviour settings menu")
-        behaviour_setting_names = [
+        behaviour_setting_names: list[str] = [
             setting
             for setting in (field.name for field in fields(self.behaviour_settings))
         ]
@@ -261,12 +267,38 @@ class Config:
         self._behaviour_settings = BehaviourConfig(**defaults["behaviour_settings"])
         logger.info("User has reset the configuration settings back to default.")
 
+    def _save_and_exit(self, original_config: "Config") -> None:
+        """This function checks if the tasklists dir filepath has changed, and asks the user
+
+        Args:
+            original_config (Config): The original config
+
+        Raises:
+            ValueError: If the new config taskslist filepath is not a directory, raise this error.
+        """
+
+        # if new configs for tasklist folderpath are the same as the old ones
+        if original_config.tasklists_dir_filepath == self.tasklists_dir_filepath:
+            self.save_config()
+            return
+
+        move_tasklists = questionary.confirm(
+            "Do you want to move all your existing tasklists into the new folder?"
+        ).ask()
+
+        if move_tasklists:
+            for filepath in original_config.tasklists_dir_filepath.iterdir():
+                filepath.move_into(self.tasklists_dir_filepath)
+            print("Successfully changed the tasklists folderpath!", style="success")
+        self.save_config()
+
     def main_configuration_ui(self) -> None:
         """pretty self explanatory, it creates the main configuration ui"""
         # why dont you make a new_config variable?
         # well because if i cancel, the config wouldnt save anyway, and unless i decided to
         # make this app persistent, it will never save between sessions unless you save it first
         logger.info("User entered main setting configuration UI")
+        original_config = deepcopy(self)
         while True:
             main_selection = questionary.select(
                 "Which setting do you want to configure?",
@@ -276,7 +308,7 @@ class Config:
                     "Change Tasklists Folder",
                     "Other Behaviour Settings",
                     questionary.Separator(),
-                    "Exit and Save",
+                    "Save and Exit",
                     "Set Defaults",
                     "Cancel All Changes",
                 ),
@@ -291,8 +323,8 @@ class Config:
                     self._configure_tasklist_filepath()
                 case "Other Behaviour Settings":
                     self._configure_behaviour_settings()
-                case "Exit and Save":
-                    self.save_config()
+                case "Save and Exit":
+                    self._save_and_exit(original_config)
                     return
                 case "Set Defaults":
                     self.reset_defaults()
