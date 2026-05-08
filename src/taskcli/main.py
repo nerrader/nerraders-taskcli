@@ -2,7 +2,7 @@ from datetime import datetime as dt
 from dataclasses import dataclass
 from pathlib import Path
 import sys  # we import sys for stderr for loguru specifically
-from typing import Annotated
+from typing import Annotated, Any
 
 from loguru import logger  # for logging
 import questionary  # for cli prompts (confirm/selection/checkbox)
@@ -310,12 +310,72 @@ def _get_styled_attribute(
             raise ValueError(f"Not a valid attribute: '{attribute}'")
 
 
-def display_tasks_table(context: typer.Context) -> None:
+def _validate_filters(filters: dict[str, str] | None) -> dict[str, str]:
+    """NOTE: This function should only be used in display_tasks_table()
+
+    Args:
+        filters (dict[str, Any]): The filters passed in by the user in the app.command() options
+
+    Raises:
+        ValueError: If the status provided by the user is invalid, raise this error.
+        ValueError: If the priority provided by the user is invalid, raise this error.
+
+    Returns:
+        dict[str, str]: The validated filter, removing none or empty values, and only returning valid ones.
+    """
+    if not filters:
+        return
+
+    validated_filters: dict[str, str] = {}
+    for filter, value in filters.items():
+        formatted_value = value.lower().strip().replace(" ", "") if value else None
+        if not formatted_value:  # basically if its none or smth like that
+            continue
+        if filter == "status" and formatted_value not in const.VALID_STATUSES:
+            raise ValueError(
+                f"'{formatted_value}' is not a valid priority. Must be one of {const.VALID_STATUSES}"
+            )
+        if filter == "priority" and formatted_value not in const.VALID_PRIORITIES:
+            raise ValueError(
+                f"'{formatted_value}' is not a valid priority. Must be one of {const.VALID_PRIORITIES}"
+            )
+        # if it passes all these checks, then add it
+        validated_filters[filter] = formatted_value
+
+    return validated_filters
+
+
+def display_tasks_table(
+    context: typer.Context, filters: dict[str, str] | None = None
+) -> None:
     """This is an internal CLI Command to display the rich table based off the tasklist."""
     # literally just for the autocomplete really
     state: ContextObject = context.obj
 
-    if len(state.tasklist) <= 0:
+    # doing all filtering and removal of tasks before the len check
+
+    # this auto clears all done tasks if the user enabled the auto_clear_done_tasks config
+    if state.config.behaviour_settings.auto_clear_done_tasks:
+        state.tasklist = tasks.clear_done_tasks(state.tasklist)
+
+    # this filters the tasks if the user added options to the list command
+    filtered_tasklist: list[tasks.Task] = [
+        task for task in state.tasklist
+    ]  # doing = state.tasklist will also modify the original tasklist
+    validated_filters = _validate_filters(
+        filters
+    )  # will return none if theres nothing in the filters
+    if validated_filters:
+        filtered_tasklist = [
+            task
+            for task in state.tasklist
+            if all(
+                getattr(task, filter) == val
+                for filter, val in validated_filters.items()
+            )
+        ]
+
+    if len(filtered_tasklist) <= 0:
         print("There is nothing in the tasklist...", style="info")
         return
 
@@ -327,11 +387,7 @@ def display_tasks_table(context: typer.Context) -> None:
     for column_name in state.config.visible_columns:
         tasks_table.add_column(column_name)
 
-    # this auto clears all done tasks
-    if state.config.behaviour_settings.auto_clear_done_tasks:
-        state.tasklist = tasks.clear_done_tasks(state.tasklist)
-
-    for task in state.tasklist:
+    for task in filtered_tasklist:
         task_contents = [
             _get_styled_attribute(column_name, task, state.config)
             for column_name in state.config.visible_columns
@@ -345,11 +401,30 @@ def display_tasks_table(context: typer.Context) -> None:
 @app.command("list")
 @app.command("view", hidden=True)
 @app.command("ls", hidden=True)
-def list_tasks(context: typer.Context) -> None:
+def list_tasks(
+    context: typer.Context,
+    status_filter: Annotated[
+        str,
+        typer.Option(
+            "--status",
+            "-s",
+            help="This will only allow the listing of the task with this status.",
+        ),
+    ] = None,
+    priority_filter: Annotated[
+        str,
+        typer.Option(
+            "--priority",
+            "-p",
+            help="This will only allow the listing of the task with that priority.",
+        ),
+    ] = None,
+) -> None:
     """To list the tasks from the tasklist. Aliases: view | ls"""
     # The actual CLI Command to list the rich table tasklist
+    filters = {"status": status_filter, "priority": priority_filter}
     logger.info("User invoked 'list' command")
-    display_tasks_table(context)
+    display_tasks_table(context, filters)
 
 
 @app.command("clear")

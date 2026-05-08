@@ -1,10 +1,7 @@
 import json
 from pathlib import Path
 from typing import Any
-
 from loguru import logger
-
-# This file is for anything related to reading and writing to files in the main filepath
 
 
 def load_json(filepath: Path) -> Any:
