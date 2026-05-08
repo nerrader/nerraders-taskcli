@@ -2,7 +2,7 @@ from datetime import datetime as dt
 from dataclasses import dataclass
 from pathlib import Path
 import sys  # we import sys for stderr for loguru specifically
-from typing import Annotated, Any
+from typing import Annotated
 
 from loguru import logger  # for logging
 import questionary  # for cli prompts (confirm/selection/checkbox)
@@ -310,7 +310,7 @@ def _get_styled_attribute(
             raise ValueError(f"Not a valid attribute: '{attribute}'")
 
 
-def _validate_filters(filters: dict[str, str] | None) -> dict[str, str]:
+def _validate_filters(filters: dict[str, str | None]) -> dict[str, str]:
     """NOTE: This function should only be used in display_tasks_table()
 
     Args:
@@ -323,9 +323,6 @@ def _validate_filters(filters: dict[str, str] | None) -> dict[str, str]:
     Returns:
         dict[str, str]: The validated filter, removing none or empty values, and only returning valid ones.
     """
-    if not filters:
-        return
-
     validated_filters: dict[str, str] = {}
     for filter, value in filters.items():
         formatted_value = value.lower().strip().replace(" ", "") if value else None
@@ -346,7 +343,7 @@ def _validate_filters(filters: dict[str, str] | None) -> dict[str, str]:
 
 
 def display_tasks_table(
-    context: typer.Context, filters: dict[str, str] | None = None
+    context: typer.Context, filters: dict[str, str | None] | None = None
 ) -> None:
     """This is an internal CLI Command to display the rich table based off the tasklist."""
     # literally just for the autocomplete really
@@ -362,9 +359,8 @@ def display_tasks_table(
     filtered_tasklist: list[tasks.Task] = [
         task for task in state.tasklist
     ]  # doing = state.tasklist will also modify the original tasklist
-    validated_filters = _validate_filters(
-        filters
-    )  # will return none if theres nothing in the filters
+    if filters:
+        validated_filters = _validate_filters(filters)
     if validated_filters:
         filtered_tasklist = [
             task
@@ -404,7 +400,7 @@ def display_tasks_table(
 def list_tasks(
     context: typer.Context,
     status_filter: Annotated[
-        str,
+        str | None,
         typer.Option(
             "--status",
             "-s",
@@ -412,7 +408,7 @@ def list_tasks(
         ),
     ] = None,
     priority_filter: Annotated[
-        str,
+        str | None,
         typer.Option(
             "--priority",
             "-p",
@@ -420,7 +416,7 @@ def list_tasks(
         ),
     ] = None,
 ) -> None:
-    """To list the tasks from the tasklist. Aliases: view | ls"""
+    """To list the tasks from the tasklist. Additionally allows filtering for status and priority. Aliases: view | ls"""
     # The actual CLI Command to list the rich table tasklist
     filters = {"status": status_filter, "priority": priority_filter}
     logger.info("User invoked 'list' command")
