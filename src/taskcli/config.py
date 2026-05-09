@@ -39,7 +39,7 @@ class BehaviourConfig:
 
 class Config:
     # These are the valid values for the visible_columns setting, it is a list of these values most of the time.
-    VALID_VISIBLE_COLUMNS: tuple[str, str, str, str, str] = (
+    VALID_VISIBLE_COLUMNS: tuple[str, str, str, str, str, str] = (
         "ID",
         "Name",
         "Status",

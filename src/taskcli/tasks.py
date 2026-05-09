@@ -202,6 +202,7 @@ def add_task(
         logger.info("No status found in add task function.")
         status = "todo"
         logger.debug("Successfully set status to 'todo' (default)", data=status)
+    list_tags: list[str] | None = None
     if tags:
         list_tags = string_split_comma(tags)
 
