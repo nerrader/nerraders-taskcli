@@ -40,20 +40,28 @@ class ContextObject:
 def add_task(
     context: typer.Context,
     name: Annotated[list[str], typer.Argument(help="The name of the task")],
-    priority: Annotated[
-        str | None,
-        typer.Option("--priority", "-p", help="The priority of the created task"),
-    ] = None,  # let the add_task() get the default priority later
     status: Annotated[
         str | None,
         typer.Option("--status", "-s", help="The status of the task"),
     ] = None,  # the __init__ in task class will automatically add a default value
+    priority: Annotated[
+        str | None,
+        typer.Option("--priority", "-p", help="The priority of the created task"),
+    ] = None,  # let the add_task() get the default priority later
     duedate: Annotated[
         str | None,
         typer.Option(
             "--duedate",
             "-d",
             help="The duedate of the task. Enter a shortcut (tomorrow, next week), or a date (MM-DD-YYYY)",
+        ),
+    ] = None,
+    tags: Annotated[
+        str | None,
+        typer.Option(
+            "--tags",
+            "-t",
+            help="The tags of a task. Seperate multiple values with commas. (e.g. education, work)",
         ),
     ] = None,
 ) -> None:
@@ -84,6 +92,7 @@ def add_task(
             "priority": priority,
             "status": status,
             "duedate": parsed_duedate,
+            "tags": tags,
         },
     )
     state.tasklist_next_id, state.tasklist, new_task = tasks.add_task(
@@ -94,6 +103,7 @@ def add_task(
         priority,
         status,
         parsed_duedate,
+        tags,
     )
     logger.success("Appended new task to the tasklist")
     print(
@@ -110,9 +120,7 @@ def add_task(
 @app.command("rm", hidden=True)
 def delete_task(
     context: typer.Context,
-    task_id: Annotated[
-        int, typer.Argument(help="The Task ID of the task being deleted")
-    ],
+    task_id: int,
 ) -> None:
     """Deletes a task based on its ID. Aliases: remove | del | rm
 
@@ -151,11 +159,11 @@ def update_task(
     context: typer.Context,
     task_id: int,
     updated_name: Annotated[
-        list[str] | None, typer.Option("--name", "-n", help="The updated name")
+        list[str] | None, typer.Option("--name", "-n", help="The updated name.")
     ] = None,
     updated_priority: Annotated[
         str | None,
-        typer.Option("--priority", "-p", help="The updated priority"),
+        typer.Option("--priority", "-p", help="The updated priority."),
     ] = None,
     updated_duedate: Annotated[
         str | None,
@@ -163,6 +171,14 @@ def update_task(
             "--duedate",
             "-d",
             help="The duedate of the task. Enter a shortcut (tomorrow, next week), or a date (MM-DD-YYYY)",
+        ),
+    ] = None,
+    updated_tags: Annotated[
+        str | None,
+        typer.Option(
+            "--tags",
+            "-t",
+            help="The new tag(s) of the updated task.",
         ),
     ] = None,
 ) -> None:
@@ -179,25 +195,20 @@ def update_task(
     # literally just for the autocomplete really
     state: ContextObject = context.obj
 
-    joined_updated_name: str | None = " ".join(updated_name) if updated_name else None
-    stripped_updated_priority = updated_priority.strip() if updated_priority else None
-    parsed_updated_duedate = None
-
-    if updated_duedate:
-        parsed_updated_duedate = tasks.parse_duedate(updated_duedate)
-
     raw_updated_contents = {
-        "name": joined_updated_name,
-        "priority": stripped_updated_priority,
-        "duedate": parsed_updated_duedate or None,
+        "name": updated_name,
+        "priority": updated_priority,
+        "duedate": updated_duedate or None,
+        "tags": updated_tags or None,
     }
     logger.debug(
         "update command params",
         command_params={
             "task_id": task_id,
-            "updated_name": joined_updated_name,
-            "updated_priority": stripped_updated_priority,
-            "updated_duedate": parsed_updated_duedate,
+            "updated_name": updated_name,
+            "updated_priority": updated_priority,
+            "updated_duedate": updated_duedate,
+            "updated_tags": updated_tags,
         },
     )
 
@@ -306,6 +317,10 @@ def _get_styled_attribute(
         case "duedate":
             formatted_duedate, task_duedate_color = task.get_formatted_duedate()
             return f"[{task_duedate_color if config.behaviour_settings.show_duedate_colors else 'white'}]{formatted_duedate}[/]"
+        case "tags":
+            if not task.tags:
+                return "No Tags"
+            return " ".join(f"#{tag.lstrip('#').strip()}" for tag in task.tags)
         case _:
             raise ValueError(f"Not a valid attribute: '{attribute}'")
 
@@ -661,17 +676,17 @@ def main():
         # These are usually errors raised by Task class setters (invalid priority, etc.)
         print(f"[bold red]Input Error:[/] {error}")
         logger.error(error)
-        raise typer.Exit()
+        sys.exit(0)
     except KeyboardInterrupt:
         # Handles Ctrl+C
         logger.debug("User did keyboard interrupt, operation cancelled")
         print("\n[yellow]Operation cancelled by user.[/]")
-        raise typer.Exit()
+        sys.exit(0)
     except Exception as error:
         logger.opt(exception=True).critical("The app crashed unexpectedly.")
         print(f"[bold red]CRITICAL ERROR:[/] {error}")
         print("[dim]Please check the app.log for a full traceback.[/]")
-        raise typer.Exit()
+        sys.exit(0)
 
 
 if __name__ == "__main__":

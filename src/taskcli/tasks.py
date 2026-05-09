@@ -20,13 +20,20 @@ class Task:
 
     # function rehydrate_loaded_tasks is the reason why we cant just remove the status from here
     def __init__(
-        self, next_id: int, name: str, priority: str, status: str, duedate: dt | None
+        self,
+        next_id: int,
+        name: str,
+        priority: str,
+        status: str,
+        duedate: dt | None,
+        tags: list[str] | None,
     ) -> None:
         self._id = next_id
         self.name = name
         self.status = status
         self.priority = priority
         self.duedate = duedate
+        self.tags = tags
 
     def to_dict(self) -> dict[str, Any]:
         """Turns the Task class object into a dictionary
@@ -42,6 +49,7 @@ class Task:
             "status": self.status,
             "priority": self.priority,
             "duedate": self.duedate.isoformat() if self.duedate else None,
+            "tags": self.tags,
         }
 
     def get_formatted_duedate(self) -> tuple[str, str]:
@@ -152,6 +160,21 @@ def parse_duedate(original_duedate: str) -> dt:
     return parsed_duedate
 
 
+def string_split_comma(text: str) -> list[str]:
+    """Splits a string (with commas) into a list of stripped strings.
+    If the resulted string from splitting it is falsy, it will not be in the list
+
+    Raises:
+        ValueError: If it is not a string, or the string is falsy
+        ValueError: The new list is empty"""
+
+    if not isinstance(text, str) or not text.strip():
+        raise ValueError(f"This is not a valid string: '{text}'")
+    if not (newlist := [item.strip() for item in text.split(",") if item.strip()]):
+        raise ValueError("The list of strings are empty now.")
+    return newlist
+
+
 def add_task(
     name: str,
     next_id: int,
@@ -160,6 +183,7 @@ def add_task(
     priority: str | None = None,
     status: str | None = None,
     duedate: dt | None = None,
+    tags: str | None = None,
 ) -> tuple[int, list[Task], Task]:
     """Adds a task to the tasklist, where the name and the priority provided will be the
     attribute values for the task.
@@ -178,14 +202,12 @@ def add_task(
         logger.info("No status found in add task function.")
         status = "todo"
         logger.debug("Successfully set status to 'todo' (default)", data=status)
+    if tags:
+        list_tags = string_split_comma(tags)
 
     # duedate already parsed
     new_task: Task = Task(
-        next_id,
-        name,
-        priority=priority,
-        status=status,
-        duedate=duedate,
+        next_id, name, priority=priority, status=status, duedate=duedate, tags=list_tags
     )
     # made a new variable so it doesnt modify the original one
     updated_tasklist = tasklist + [new_task]
@@ -225,12 +247,31 @@ def _validate_update_contents(
         ValueError: If the new validated update contents were empty.
     """
 
+    def is_reset(value) -> bool:
+        if isinstance(value, str) and value.strip().lower() == "none":
+            return True
+        return False
+
+    transforms = {
+        "name": lambda name: (
+            " ".join(name).strip() if isinstance(name, list) else name.strip()
+        ),
+        "priority": lambda priority: priority.strip(),
+        "duedate": lambda duedate: (
+            None if is_reset(duedate) else parse_duedate(duedate)
+        ),
+        "tags": lambda tags: None if is_reset(tags) else string_split_comma(tags),
+    }
+
     validated_update_contents = {
-        key: value for key, value in update_contents.items() if value
+        key: transformed
+        for key, value in update_contents.items()
+        if value and ((transformed := transforms[key](value)) or is_reset(value))
     }
     # do this later
     if not validated_update_contents:
         raise ValueError("There were no contents to update in the first place.")
+
     # the checking if its a valid_priority will be done in the class itself using @property.setter
     logger.debug("The validated update contents", contents=validated_update_contents)
     return validated_update_contents
@@ -319,6 +360,7 @@ def rehydrate_loaded_tasks(unhydrated_tasklist: list[dict[str, Any]]) -> list[Ta
                 priority=task["priority"],
                 status=task["status"],
                 duedate=parsed_date,
+                tags=task["tags"],
             )
         )
     logger.success("Rehydrated the tasklist with new task classes")

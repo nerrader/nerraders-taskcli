@@ -45,9 +45,10 @@ class Config:
         "Status",
         "Priority",
         "Duedate",
+        "Tags",
     )
     DEFAULT_CONFIG: dict[str, Any] = {
-        "visible_columns": ["ID", "Name", "Status", "Priority"],
+        "visible_columns": ["ID", "Name", "Status", "Priority", "Duedate"],
         "default_priority": "medium",
         "current_tasklist": "main",
         "tasklists_dir_filepath": str(const.MAIN_FILEPATH / "tasklists"),
