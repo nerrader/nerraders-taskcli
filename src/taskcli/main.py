@@ -359,9 +359,9 @@ def display_tasks_table(
     filtered_tasklist: list[tasks.Task] = [
         task for task in state.tasklist
     ]  # doing = state.tasklist will also modify the original tasklist
-    if filters:
-        validated_filters = _validate_filters(filters)
-    if validated_filters:
+
+    # the filters thing
+    if filters and (validated_filters := _validate_filters(filters)):
         filtered_tasklist = [
             task
             for task in state.tasklist
