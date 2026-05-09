@@ -486,22 +486,6 @@ def config_cli(context: typer.Context) -> None:
     state.config.main_configuration_ui()
 
 
-@app.command("reset")
-def reset_files(context: typer.Context) -> None:
-    """Resets all the user data including the taskcli and configs, does not include logs."""
-    logger.info("User invoked 'reset' command")
-
-    state: ContextObject = context.obj
-    reset_confirm = questionary.confirm(
-        "Are you sure you want to reset all your tasks and configs? NOTE: This won't reset app logs."
-    ).ask()
-
-    if reset_confirm:
-        storage.reset_files(state.config.tasklists_dir_filepath, const.CONFIG_FILEPATH)
-        print("Successfully reset files!", style="success")
-        logger.success("Successfully reset app data files!")
-
-
 def get_tasklist_filepath(config: config.Config) -> Path:
     return (config.tasklists_dir_filepath / config.current_tasklist).with_suffix(
         ".json"

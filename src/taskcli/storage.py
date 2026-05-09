@@ -49,19 +49,3 @@ def check_tasklists(
     if not tasklists:  # if empty
         # then create a main default tasklists with the placeholder tasks
         write_json(tasks_dir_filepath / "main.json", placeholder_tasks)
-
-
-def reset_files(tasks_dir_filepath: Path, config_filepath: Path) -> None:
-    """Removes all files according to the filepaths list. This list should only contain the tasklists
-
-    Args:
-        tasks_dir_filepath (Path): The tasklists directory, where all the tasklist.json(s) are stored
-        config_filepath (Path): The config.json filepath
-    """
-    files_to_remove = list(tasks_dir_filepath.glob("*.json")) + [config_filepath]
-    for file in files_to_remove:
-        file.unlink(missing_ok=True)
-        logger.debug(f"Deleted {file}")
-    logger.success(
-        "Successfully resetted tasklist and settings. Files will be initialized on next launch."
-    )
