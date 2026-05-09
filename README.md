@@ -7,24 +7,19 @@ So, I built this tool to get rid of my mental clutter by providing a way to bett
 # Features
 
 - ### Core Features of a TaskCLI
-
     Adding, deleting, updating, marking, listing tasks are all here.
 
 - ### Customizable Settings
-
     This tool uses the `questionary` module to open up an **interactive menu to customize the settings** by typing out a command.
 
 - ### Local Storage
     This tool does not require an internet connection to run. You can still manage and use all the features while being **offline** without drawbacks.
+  
 - ### Logging
     This tool uses the `loguru` module for **logging and troubleshooting** the app.
-- ### Additional Commands
-
-    This tool has some additional commands like `clear` to clear your entire tasklist, and `reset` to factory reset both your tasklist and configs.
 
 - ### Additional Task Attributes
-
-    This tool has additional task attributes like priority, and duedates.
+    This tool has additional task attributes like priority, duedates, and tags
 
 - ### Tasklists
     This tool allows for the adding, removing, renaming and switching of different tasklists, so you can group your tasks more easily.
@@ -53,6 +48,13 @@ taskcli list
 ```
 
 This command **lists the table** of tasks that you currently have.
+```bash
+taskcli update 1 --name "play ultrakill"
+```
+
+This command **updates the task** with ID 1 with a new name: "play ultrakill"
+> [!IMPORTANT]
+> Command options with multiple values (such as names), must be put inside quotation marks.
 
 ```bash
 taskcli delete 1
@@ -79,22 +81,19 @@ Use `--help` after any command to find more about the **command's arguments, opt
 |   list   | NONE                        | Lists all tasks in a table                                                               |
 |  config  | NONE                        | Opens up the main configuration menu                                                     |
 |  clear   | NONE                        | Asks the user for confirmation, then clears the tasklist                                 |
-|  reset   | NONE                        | Asks the user for confirmation, then resets the tasklist and configs to factory defaults |
 | tasklist | `sub-command`               | Manage multiple lists (add, remove, rename, switch)                                      |
 
 > [!NOTE]
-> All data and logs are stored locally in `AppData/Roaming/taskcli`.
+> All data and logs are stored locally in `AppData/Roaming/nerrader/TaskCLI`.
 
 # Upcoming/Planned Features
 
 Here are some features that will be planned for **future major/minor releases** of the TaskCLI.
 
 - Undo/Redo commands
-- Task tags
 - Sub-tasks in tasks
 - Task archiving to expand on the auto_clear_done_tasks config
-- List filtering and sorting
-- More settings
+- List sorting
 
 # Contributing
 
@@ -113,7 +112,12 @@ git clone https://github.com/[YOUR-USERNAME]/nerrader-taskcli-python.git
 git switch -c [NEW-BRANCH-NAME]
 ```
 
-Branches should start with a branch prefix such as `feature/` for new features, and `fix/` to fix a known issue/bug, just to name a few. 4. Use `uv sync` to automatically set up the virtual environment and grab all the dependencies for you. 5. Commit your changes. Make sure your commit messages are clear and concise. 6. Push changes to your fork of the repository 7. Open a pull request. If you go back to the original repository, there should be a button called Compare & Pull Request. Click it, and one should be automaticallly made for you. Describe your changes and why they should be implemented in the main repository, then submit.
+Branches should start with a branch prefix such as `feature/` for new features, and `fix/` to fix a known issue/bug, just to name a few.
+
+4. Use `uv sync` to automatically set up the virtual environment and grab all the dependencies for you. <br>
+5. Commit your changes. Make sure your commit messages are clear and concise. <br>
+6. Push changes to your fork of the repository <br>
+7. Open a pull request. If you go back to the original repository, there should be a button called Compare & Pull Request. Click it, and one should be automaticallly made for you. Describe your changes and why they should be implemented in the main repository, then submit.
 
 > [!IMPORTANT]
 > Please make sure your code works properly before submitting. Follow PEP 8 guidelines, maintain consistent styling, and include type annotations and documentation for any new functions.
@@ -122,7 +126,7 @@ By contributing this project, you agree that your contribution will be **license
 
 # Project Module Technical Stack
 
-This project does use some external python modules and packages to help with the development process. So I thought it would be helpful If I documented them here:
+This project uses external python libraries to help with the development process. This section aims to document them and explain what each of them do.
 
 ### Main Project Dependencies
 
