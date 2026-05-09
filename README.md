@@ -39,18 +39,25 @@ With these instructions, I am assuming you are using the **latest version of the
 4. Start running commands!
 
 ### Quick Usage
+
 Here are some **quick commands** to get you to know how it works better:
+
 ```bash
 taskcli add get groceries
 ```
+
 This command **adds a task** called 'get groceries' with ID 1
+
 ```bash
 taskcli list
 ```
+
 This command **lists the table** of tasks that you currently have.
+
 ```bash
 taskcli delete 1
 ```
+
 This command **removes the task with ID 1**, which in this case is the task we just created called 'get groceries'
 
 Use `--help` after any command to find more about the **command's arguments, options and aliases.**
@@ -83,8 +90,9 @@ Use `--help` after any command to find more about the **command's arguments, opt
 Here are some features that will be planned for **future major/minor releases** of the TaskCLI.
 
 - Undo/Redo commands
-- Adding task tags or groups.
-- Bulk modifying tasks (e.g. bulk removing, bulk marking, etc)
+- Task tags
+- Sub-tasks in tasks
+- Task archiving to expand on the auto_clear_done_tasks config
 - List filtering and sorting
 - More settings
 
@@ -93,19 +101,19 @@ Here are some features that will be planned for **future major/minor releases** 
 This project welcomes all contributors, and whether you are fixing a bug, adding a new feature, or just improving the documentation of this project, you can get started by just following these steps:
 
 1. Fork this repository
-2. Clone this repository on your computer 
+2. Clone this repository on your computer
+
 ```bash
 git clone https://github.com/[YOUR-USERNAME]/nerrader-taskcli-python.git
 ```
-3. It is recommended that you make a seperate branch than the main branch `git switch -c [NEW-BRANCH-NAME]`, 
+
+3. It is recommended that you make a seperate branch than the main branch `git switch -c [NEW-BRANCH-NAME]`,
+
 ```bash
 git switch -c [NEW-BRANCH-NAME]
 ```
-Branches should start with a branch prefix such as `feature/` for new features, and `fix/` to fix a known issue/bug, just to name a few.
-4. Use `uv sync` to automatically set up the virtual environment and grab all the dependencies for you.
-5. Commit your changes. Make sure your commit messages are clear and concise.
-6. Push changes to your fork of the repository
-7. Open a pull request. If you go back to the original repository, there should be a button called Compare & Pull Request. Click it, and one should be automaticallly made for you. Describe your changes and why they should be implemented in the main repository, then submit.
+
+Branches should start with a branch prefix such as `feature/` for new features, and `fix/` to fix a known issue/bug, just to name a few. 4. Use `uv sync` to automatically set up the virtual environment and grab all the dependencies for you. 5. Commit your changes. Make sure your commit messages are clear and concise. 6. Push changes to your fork of the repository 7. Open a pull request. If you go back to the original repository, there should be a button called Compare & Pull Request. Click it, and one should be automaticallly made for you. Describe your changes and why they should be implemented in the main repository, then submit.
 
 > [!IMPORTANT]
 > Please make sure your code works properly before submitting. Follow PEP 8 guidelines, maintain consistent styling, and include type annotations and documentation for any new functions.
