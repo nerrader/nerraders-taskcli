@@ -7,22 +7,32 @@ So, I built this tool to get rid of my mental clutter by providing a way to bett
 # Features
 
 - ### Core Features of a TaskCLI
+
     Adding, deleting, updating, marking, listing tasks are all here.
 
 - ### Customizable Settings
+
     This tool uses the `questionary` module to open up an **interactive menu to customize the settings** by typing out a command.
 
 - ### Local Storage
+
     This tool does not require an internet connection to run. You can still manage and use all the features while being **offline** without drawbacks.
-  
+
 - ### Logging
+
     This tool uses the `loguru` module for **logging and troubleshooting** the app.
 
 - ### Additional Task Attributes
+
     This tool has additional task attributes like priority, duedates, and tags
 
 - ### Tasklists
+
     This tool allows for the adding, removing, renaming and switching of different tasklists, so you can group your tasks more easily.
+
+- ### Undo / Redo
+
+    This tool allows you to undo and redo changes in the tasklist by using `undo` and `redo` commands respectively.
 
 # How to Download & Use
 
@@ -48,11 +58,13 @@ taskcli list
 ```
 
 This command **lists the table** of tasks that you currently have.
+
 ```bash
 taskcli update 1 --name "play ultrakill"
 ```
 
 This command **updates the task** with ID 1 with a new name: "play ultrakill"
+
 > [!IMPORTANT]
 > Command options with multiple values (such as names), must be put inside quotation marks.
 
@@ -72,16 +84,16 @@ Use `--help` after any command to find more about the **command's arguments, opt
 
 #### Main TaskCLI Commands:
 
-| Command  | Required Arguments          | Description                                                                              |
-| :------: | :-------------------------- | :--------------------------------------------------------------------------------------- |
-|   add    | task_name                   | Adds a new task with that task name                                                      |
-|  delete  | task_id                     | Removes a specific task from your list based on the task ID.                             |
-|  update  | task_id, `updated-contents` | Updates with the updated_contents (e.g. name, priority) based on task ID                 |
-|   mark   | task_id, updated_status     | Marks task with the new updated status based on task ID                                  |
-|   list   | NONE                        | Lists all tasks in a table                                                               |
-|  config  | NONE                        | Opens up the main configuration menu                                                     |
-|  clear   | NONE                        | Asks the user for confirmation, then clears the tasklist                                 |
-| tasklist | `sub-command`               | Manage multiple lists (add, remove, rename, switch)                                      |
+| Command  | Required Arguments          | Description                                                              |
+| :------: | :-------------------------- | :----------------------------------------------------------------------- |
+|   add    | task_name                   | Adds a new task with that task name                                      |
+|  delete  | task_id                     | Removes a specific task from your list based on the task ID.             |
+|  update  | task_id, `updated-contents` | Updates with the updated_contents (e.g. name, priority) based on task ID |
+|   mark   | task_id, updated_status     | Marks task with the new updated status based on task ID                  |
+|   list   | NONE                        | Lists all tasks in a table                                               |
+|  config  | NONE                        | Opens up the main configuration menu                                     |
+|  clear   | NONE                        | Asks the user for confirmation, then clears the tasklist                 |
+| tasklist | `sub-command`               | Manage multiple lists (add, remove, rename, switch)                      |
 
 > [!NOTE]
 > All data and logs are stored locally in `AppData/Roaming/nerrader/TaskCLI`.
@@ -90,7 +102,6 @@ Use `--help` after any command to find more about the **command's arguments, opt
 
 Here are some features that will be planned for **future major/minor releases** of the TaskCLI.
 
-- Undo/Redo commands
 - Sub-tasks in tasks
 - Task archiving to expand on the auto_clear_done_tasks config
 - List sorting

@@ -5,8 +5,8 @@ from pathlib import Path
 import questionary
 from loguru import logger
 
-from taskcli import storage
 from taskcli import constants as const
+from taskcli import storage
 
 # This file is for everything related to configs
 print = const.CONSOLE.print

@@ -5,11 +5,8 @@ from typing import Any, TYPE_CHECKING
 from dateparser import parse as dateparser
 from loguru import logger
 
-from taskcli import storage
 from taskcli import constants as const
-
-# This file is for everything related to tasks.
-
+from taskcli import storage
 
 if TYPE_CHECKING:
     from taskcli import config
