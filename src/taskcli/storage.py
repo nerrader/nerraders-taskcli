@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 from typing import Any
 from loguru import logger
+from taskcli import constants as const
 
 
 def load_json(filepath: Path) -> Any:
@@ -21,21 +22,29 @@ def write_json(filepath: Path, data: Any) -> None:
         json.dump(data, file, indent=4, ensure_ascii=False)
 
 
-def check_config_file(
-    config_dir: Path, config_filepath: Path, default_config: dict[str, Any]
-):
+def check_config_file() -> None:
     logger.debug("Checking storage for the config file")
+    config_filepath = const.CONFIG_FILEPATH
 
     if not config_filepath.exists():
-        config_dir.mkdir(parents=True, exist_ok=True)
-        write_json(config_filepath, default_config)
+        config_filepath.parent.mkdir(parents=True, exist_ok=True)
+        write_json(config_filepath, const.DEFAULT_CONFIG)
 
         logger.debug("Config file wasn't found, set configs to default")
 
 
+def check_histories() -> None:
+    logger.debug("Checking storage for the history file.")
+    history_dirpath = const.HISTORY_DIR_FILEPATH
+    history_dirpath.mkdir(parents=True, exist_ok=True)
+
+    histories = list(history_dirpath.glob("*.json"))
+    if not histories:
+        write_json(history_dirpath / "main-history.json", const.PLACEHOLDER_HISTORY)
+
+
 def check_tasklists(
     tasks_dir_filepath: Path,
-    placeholder_tasks: dict,
 ) -> None:
     """checks if the files exist, if not it creates them and fills them with default data
 
@@ -48,4 +57,4 @@ def check_tasklists(
     tasklists = list(tasks_dir_filepath.glob("*.json"))
     if not tasklists:  # if empty
         # then create a main default tasklists with the placeholder tasks
-        write_json(tasks_dir_filepath / "main.json", placeholder_tasks)
+        write_json(tasks_dir_filepath / "main.json", const.PLACEHOLDER_TASKS)

@@ -1,7 +1,6 @@
 from copy import deepcopy
 from dataclasses import dataclass, asdict, fields
 from pathlib import Path
-from typing import Any
 
 import questionary
 from loguru import logger
@@ -47,22 +46,6 @@ class Config:
         "Duedate",
         "Tags",
     )
-    DEFAULT_CONFIG: dict[str, Any] = {
-        "visible_columns": ["ID", "Name", "Status", "Priority", "Duedate"],
-        "default_priority": "medium",
-        "current_tasklist": "main",
-        "tasklists_dir_filepath": str(const.MAIN_FILEPATH / "tasklists"),
-        "behaviour_settings": {
-            "auto_clear_done_tasks": False,
-            "require_clear_confirmation": True,
-            "require_delete_confirmation": False,
-            "show_table_lines": True,
-            "show_status_colors": True,
-            "show_priority_colors": True,
-            "show_duedate_colors": True,
-            "verbose_mode": False,
-        },
-    }
 
     def __init__(self) -> None:
         data: dict = self.load_configs()
@@ -260,7 +243,7 @@ class Config:
         NOTE: meant to be used in main_configuration_ui(), but maybe can be used somewhere else.
         name is self explanatory i think
         """
-        defaults = self.DEFAULT_CONFIG
+        defaults = const.DEFAULT_CONFIG
         self.visible_columns: list[str] = defaults["visible_columns"]
         self.default_priority: str = defaults["default_priority"]
         self.current_tasklist = defaults["current_tasklist"]

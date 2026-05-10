@@ -176,14 +176,10 @@ def string_split_comma(text: str) -> list[str]:
 
 
 def add_task(
-    name: str,
-    next_id: int,
+    task_properties: dict[str, Any],
     tasklist: list[Task],
+    next_id: int,
     configs: config.Config,
-    priority: str | None = None,
-    status: str | None = None,
-    duedate: dt | None = None,
-    tags: str | None = None,
 ) -> tuple[int, list[Task], Task]:
     """Adds a task to the tasklist, where the name and the priority provided will be the
     attribute values for the task.
@@ -193,28 +189,44 @@ def add_task(
         list[Task]: The new and updated tasklist
         Task: The new task that was created
     """
-    # if no priority, set priority to default
-    if not priority:
-        logger.info("No priority found in add task function.", data=priority)
+    # variable initialization
+    raw_name: list[str] = task_properties["name"]
+    raw_status: str | None = task_properties["status"]
+    raw_priority: str | None = task_properties["priority"]
+    raw_duedate: str | None = task_properties["duedate"]
+    raw_tags: str | None = task_properties["tags"]
+
+    # checking and refining the variables
+    joined_name: str = (" ".join(raw_name)).strip()
+    parsed_duedate: dt | None = None
+    if raw_duedate:
+        parsed_duedate = parse_duedate(raw_duedate)
+
+    # refining the variables with defaults if none
+    if not raw_priority:
+        logger.debug("No priority found in add task function.", data=raw_priority)
         priority = configs.default_priority
         logger.debug("Successfully set priority to default priority", data=priority)
-    if not status:
-        logger.info("No status found in add task function.")
+    if not raw_status:
+        logger.debug("No status found in add task function.")
         status = "todo"
         logger.debug("Successfully set status to 'todo' (default)", data=status)
     list_tags: list[str] | None = None
-    if tags:
-        list_tags = string_split_comma(tags)
+    if raw_tags:
+        list_tags = string_split_comma(raw_tags)
 
-    # duedate already parsed
     new_task: Task = Task(
-        next_id, name, priority=priority, status=status, duedate=duedate, tags=list_tags
+        next_id,
+        joined_name,
+        priority=priority,
+        status=status,
+        duedate=parsed_duedate,
+        tags=list_tags,
     )
+
     # made a new variable so it doesnt modify the original one
     updated_tasklist = tasklist + [new_task]
-
     next_id += 1
-
     return (next_id, updated_tasklist, new_task)
 
 
@@ -289,13 +301,10 @@ def update_task(
         task_id (int): The task ID that is updated.
         updated_contents (dict[str, Any]): The contents of the tasks that will be updated
     """
-    # checks if the task_id exists
     target_task = find_target_task(task_id, tasklist)
 
-    # the data for the new validated update contents
     updated_contents = _validate_update_contents(updated_contents)
 
-    # now to finally update it
     for key, value in updated_contents.items():
         setattr(target_task, key, value)
 
@@ -336,10 +345,9 @@ def load_tasks(tasklist_filepath) -> tuple[list[dict[str, Any]], int]:
     return (tasklist, next_id)
 
 
-# make it a docstring later, so basically it rehydrates those dictionaries into classes
 def rehydrate_loaded_tasks(unhydrated_tasklist: list[dict[str, Any]]) -> list[Task]:
     """
-    NOTE: THIS SHOULD ONLY BE USED IN THE __init__ FUNCTION OF TASK MANAGER CLASS
+    NOTE: THIS FUNCTION WAS MEANT TO BE USED IN initialize_tasks()
 
     Rehydrates and turns the loaded tasks from the tasklist.json into Task classes, as you cannot
     save python classes into a .json file. Therefore, when you load the file, what comes out is a python
@@ -365,9 +373,6 @@ def rehydrate_loaded_tasks(unhydrated_tasklist: list[dict[str, Any]]) -> list[Ta
             )
         )
     logger.success("Rehydrated the tasklist with new task classes")
-    logger.debug(
-        f"Rehydrated tasklist: {[task.to_dict() for task in rehydrated_tasklist]}"
-    )
     return rehydrated_tasklist
 
 

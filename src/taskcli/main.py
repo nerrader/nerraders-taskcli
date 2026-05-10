@@ -1,4 +1,4 @@
-from datetime import datetime as dt
+from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
 import sys  # we import sys for stderr for loguru specifically
@@ -14,10 +14,11 @@ from rich.table import Table
 import typer
 
 # other taskcli files, local to project
-from taskcli import tasks
-from taskcli import storage
 from taskcli import config
 from taskcli import constants as const
+from taskcli import history
+from taskcli import storage
+from taskcli import tasks
 from taskcli import __version__ as taskcli_version
 
 
@@ -34,6 +35,9 @@ class ContextObject:
     tasklist: list[tasks.Task]
     tasklist_next_id: int
     tasklist_filepath: Path
+    history: dict[
+        str, list
+    ]  # the history thing that is used for undos/redos in history.py
 
 
 @app.command("add")
@@ -69,7 +73,6 @@ def add_task(
 
     args are pretty self explanatory wont add them here, except for one:
     context (typer.Context): The context required to read and write to the needed global variables
-    config (config.Config): only required to make the thing fill in the default priority if priority is not given by user
     """
     logger.info(
         "User invoked add command",
@@ -78,40 +81,46 @@ def add_task(
     # literally just for the autocomplete really
     state: ContextObject = context.obj
 
-    # to override the old list[str] so mypys happy
-    joined_name: str = (" ".join(name)).strip()
-    parsed_duedate: dt | None = None
-    if duedate:
-        parsed_duedate = tasks.parse_duedate(duedate)
+    original_tasklist = deepcopy(state.tasklist)
+    original_next_id = state.tasklist_next_id
 
     # the add_task function will deal with the missing values themselves
     logger.debug(
-        "task manager add task command_params",
+        "raw add task command_params",
         command_params={
-            "name": joined_name,
+            "name": name,
             "priority": priority,
             "status": status,
-            "duedate": parsed_duedate,
+            "duedate": duedate,
             "tags": tags,
         },
     )
+
+    raw_task_properties = {
+        "name": name,
+        "status": status,
+        "priority": priority,
+        "duedate": duedate,
+        "tags": tags,
+    }
+
     state.tasklist_next_id, state.tasklist, new_task = tasks.add_task(
-        joined_name,
-        state.tasklist_next_id,
+        raw_task_properties,
         state.tasklist,
+        state.tasklist_next_id,
         state.config,
-        priority,
-        status,
-        parsed_duedate,
-        tags,
     )
     logger.success("Appended new task to the tasklist")
     print(
         f"Successfully added new task '{new_task.name}' with ID {new_task.id} to the tasklist.",
         style="success",
     )
+    state.history = history.add_undo_stack(
+        state.history, {"next_id": original_next_id, "tasklist": original_tasklist}
+    )
     display_tasks_table(context)
     tasks.save_tasks(state.tasklist_filepath, state.tasklist, state.tasklist_next_id)
+    history.save_history(state.config.current_tasklist, state.history)
 
 
 @app.command("delete")
@@ -133,6 +142,9 @@ def delete_task(
     # literally just for the autocomplete really
     state: ContextObject = context.obj
 
+    original_tasklist = deepcopy(state.tasklist)
+    original_next_id = state.tasklist_next_id
+
     confirm_delete = (
         questionary.confirm(f"Are you sure you want to delete task ID {task_id}")
         .skip_if(
@@ -149,9 +161,14 @@ def delete_task(
     state.tasklist = tasks.delete_task(state.tasklist, task_id)
     logger.success(f"Succesfully deleted task with ID {task_id}")
     print(f"Successfully deleted task with ID {task_id}", style="success")
+
+    state.history = history.add_undo_stack(
+        state.history, {"next_id": original_next_id, "tasklist": original_tasklist}
+    )
     display_tasks_table(context)
 
     tasks.save_tasks(state.tasklist_filepath, state.tasklist, state.tasklist_next_id)
+    history.save_history(state.config.current_tasklist, state.history)
 
 
 @app.command("update")
@@ -195,6 +212,9 @@ def update_task(
     # literally just for the autocomplete really
     state: ContextObject = context.obj
 
+    original_tasklist = deepcopy(state.tasklist)
+    original_next_id = state.tasklist_next_id
+
     raw_updated_contents = {
         "name": updated_name,
         "priority": updated_priority,
@@ -217,9 +237,14 @@ def update_task(
     # if it reaches here, that means no errors occured
     logger.success(f"Successfully updated task with ID {task_id}")
     print(f"Successfully updated task with ID {task_id}", style="success")
+
+    state.history = history.add_undo_stack(
+        state.history, {"next_id": original_next_id, "tasklist": original_tasklist}
+    )
     display_tasks_table(context)
 
     tasks.save_tasks(state.tasklist_filepath, state.tasklist, state.tasklist_next_id)
+    history.save_history(state.config.current_tasklist, state.history)
 
 
 @app.command("mark")
@@ -249,6 +274,8 @@ def mark_task(
     )
     # literally just for the autocomplete really
     state: ContextObject = context.obj
+    original_tasklist = deepcopy(state.tasklist)
+    original_next_id = state.tasklist_next_id
 
     # dw, the task class setter will deal with invalid statuses
     state.tasklist = tasks.mark_task(state.tasklist, task_id, updated_status)
@@ -259,9 +286,14 @@ def mark_task(
         f"Successfully updated task ID {task_id} with status {updated_status}",
         style="success",
     )
+
+    state.history = history.add_undo_stack(
+        state.history, {"next_id": original_next_id, "tasklist": original_tasklist}
+    )
     display_tasks_table(context)
 
     tasks.save_tasks(state.tasklist_filepath, state.tasklist, state.tasklist_next_id)
+    history.save_history(state.config.current_tasklist, state.history)
 
 
 def _get_styled_attribute(
@@ -329,7 +361,7 @@ def _validate_filters(filters: dict[str, str | None]) -> dict[str, str]:
     """NOTE: This function should only be used in display_tasks_table()
 
     Args:
-        filters (dict[str, Any]): The filters passed in by the user in the app.command() options
+        filters (dict[str, str | None]): The filters passed in by the user in the app.command() options
 
     Raises:
         ValueError: If the status provided by the user is invalid, raise this error.
@@ -454,8 +486,11 @@ def clear_tasks(
     """
     # literally just for the autocomplete really
     logger.info("User invoked 'clear' command")
-    logger.debug("clear command params", command_params={"clear_confirm": confirm})
+    logger.debug(f"clear command params: ['clear_confirm': {confirm}]")
     state: ContextObject = context.obj
+
+    original_tasklist = deepcopy(state.tasklist)
+    original_next_id = state.tasklist_next_id
 
     confirm_clear: bool = (
         questionary.confirm("Are you sure you want to clear the entire tasklist?")
@@ -469,7 +504,15 @@ def clear_tasks(
         print("Tasklist clear cancelled", style="info")
         logger.info("Cancelled clearing of tasklist")
         return
+    state.tasklist, state.tasklist_next_id = tasks.clear_tasklist()
+
+    state.history = history.add_undo_stack(
+        state.history, {"next_id": original_next_id, "tasklist": original_tasklist}
+    )
+
     tasks.save_tasks(state.tasklist_filepath, state.tasklist, state.tasklist_next_id)
+    history.save_history(state.config.current_tasklist, state.history)
+
     logger.success("Successfully cleared all tasks in tasklist!")
 
 
@@ -486,80 +529,82 @@ def config_cli(context: typer.Context) -> None:
     state.config.main_configuration_ui()
 
 
+@app.command("undo")
+def task_undo(context: typer.Context) -> None:
+    logger.info("User invoked 'undo' command.")
+    state: ContextObject = context.obj
+
+    original_state = deepcopy(state)
+
+    if not state.history["undo_stack"]:
+        print("There is nothing to undo.", style="info")
+        return
+
+    if previous_state := state.history["undo_stack"][-1]:
+        state.tasklist_next_id = previous_state["next_id"]
+        state.tasklist = previous_state["tasklist"]
+        state.history["undo_stack"].remove(previous_state)
+
+        state.history = history.add_redo_stack(
+            state.history,
+            {
+                "next_id": original_state.tasklist_next_id,
+                "tasklist": original_state.tasklist,
+            },
+        )
+
+        tasks.save_tasks(
+            state.tasklist_filepath, state.tasklist, state.tasklist_next_id
+        )
+        history.save_history(state.config.current_tasklist, state.history)
+        logger.success("Successfully undid changes.")
+        print("Successfully undid changes.", style="success")
+        return
+
+    # if it reaches here that means there was nothing to undo to begin with
+    logger.info("Cancelled undo, there was nothing to undo to begin with")
+    print("There is nothing to undo.", style="info")
+
+
+@app.command("redo")
+def task_redo(context: typer.Context) -> None:
+    logger.info("User invoked 'redo' command.")
+    state: ContextObject = context.obj
+
+    original_state = deepcopy(state)
+
+    if not state.history["redo_stack"]:
+        print("There is nothing to undo.", style="info")
+        return
+
+    if redo_state := state.history["redo_stack"][-1]:
+        state.tasklist_next_id = redo_state["next_id"]
+        state.tasklist = redo_state["tasklist"]
+
+        state.history["redo_stack"].remove(redo_state)
+        state.history = history.add_undo_stack(
+            state.history,
+            {
+                "next_id": original_state.tasklist_next_id,
+                "tasklist": original_state.tasklist,
+            },
+        )
+        tasks.save_tasks(
+            state.tasklist_filepath, state.tasklist, state.tasklist_next_id
+        )
+        history.save_history(state.config.current_tasklist, state.history)
+        logger.success("Successfully redid changes.")
+        print("Successfully redid changes.", style="success")
+        return
+
+    # if it reaches here that means there was nothing to redo to begin with
+    logger.info("Cancelled redo, there was nothing to redo to begin with")
+    print("There is nothing to redo.", style="info")
+
+
 def get_tasklist_filepath(config: config.Config) -> Path:
     return (config.tasklists_dir_filepath / config.current_tasklist).with_suffix(
         ".json"
-    )
-
-
-@app.callback(invoke_without_command=True)
-def initialize(
-    context: typer.Context,
-    verbose: Annotated[
-        bool,
-        typer.Option("--verbose", "-v", help="This flag enables verbose mode"),
-    ] = False,
-    version: Annotated[
-        bool, typer.Option("--version", "-V", help="Shows the version of the TaskCLI")
-    ] = False,
-) -> None:
-    """TaskCLI: A tool to help organize and list your tasks"""
-    # basically this is the first thing that runs when app() is called
-    # we first check storage to generate the files and stuff if they dont exist, then
-    # we create a context.obj to store the variables in
-    # we also create a logger object thingy to actually log things
-
-    # Args:
-    #     context (typer.Context): Context object used by typer. You must use context.obj to store persistent values.
-    #
-
-    if version:
-        print(f"v{taskcli_version}")
-        raise typer.Exit()
-
-    # for the app.log, always runs
-    logger.remove()
-    logger.add(
-        const.MAIN_FILEPATH / "app.log",
-        rotation="00:00",
-        retention=0,
-        level="DEBUG",
-        format="{time:DD-MM-YYYY_HH:mm:ss} > {name}:{line} > {level}: {message}",
-    )
-
-    storage.check_config_file(
-        const._dirs.user_config_path,
-        const.CONFIG_FILEPATH,
-        config.Config.DEFAULT_CONFIG,
-    )
-
-    loaded_config: config.Config = config.Config()
-    final_verbose_mode: bool = loaded_config.behaviour_settings.verbose_mode or verbose
-
-    logger.debug(f"Verbose mode is {final_verbose_mode}")
-
-    # this makes the user be able to see things in the terminal
-    if final_verbose_mode:
-        logger.debug(
-            f"Verbose mode enabled via {'config' if loaded_config.behaviour_settings.verbose_mode else 'CLI flag'}"
-        )
-        logger.add(
-            sys.stderr,
-            format="{time:DD-MM-YYYY_HH:mm:ss} > {name}:{line} > {level}: {message}",
-            level="DEBUG",
-        )
-
-    tasklist_filepath = get_tasklist_filepath(loaded_config)
-
-    storage.check_tasklists(
-        loaded_config.tasklists_dir_filepath, const.PLACEHOLDER_TASKS
-    )
-
-    tasklist, next_id = tasks.initialize_tasks(tasklist_filepath)
-
-    context.obj = ContextObject(loaded_config, tasklist, next_id, tasklist_filepath)
-    logger.debug(
-        "App initialization done. Put all the variables needed in context.obj",
     )
 
 
@@ -651,6 +696,75 @@ def list_tasklists(context: typer.Context):
         print(
             f"- {tasklist} {'(CURRENT)' if tasklist == state.config.current_tasklist else ''}"
         )
+
+
+@app.callback(invoke_without_command=True)
+def initialize(
+    context: typer.Context,
+    verbose: Annotated[
+        bool,
+        typer.Option("--verbose", "-v", help="This flag enables verbose mode"),
+    ] = False,
+    version: Annotated[
+        bool, typer.Option("--version", "-V", help="Shows the version of the TaskCLI")
+    ] = False,
+) -> None:
+    """TaskCLI: A tool to help organize and list your tasks"""
+    # basically this is the first thing that runs when app() is called
+    # we first check storage to generate the files and stuff if they dont exist, then
+    # we create a context.obj to store the variables in
+    # we also create a logger object thingy to actually log things
+
+    # Args:
+    #     context (typer.Context): Context object used by typer. You must use context.obj to store persistent values.
+    #
+
+    if version:
+        print(f"v{taskcli_version}")
+        raise typer.Exit()
+
+    # for the app.log, always runs
+    logger.remove()
+    logger.add(
+        const.APPLOG_FILEPATH,
+        rotation="00:00",
+        retention=0,
+        level="DEBUG",
+        format="{time:DD-MM-YYYY_HH:mm:ss} > {name}:{line} > {level}: {message}",
+    )
+
+    storage.check_config_file()
+    storage.check_histories()
+
+    loaded_config: config.Config = config.Config()
+    final_verbose_mode: bool = loaded_config.behaviour_settings.verbose_mode or verbose
+
+    logger.debug(f"Verbose mode is {final_verbose_mode}")
+
+    # this makes the user be able to see things in the terminal
+    if final_verbose_mode:
+        logger.debug(
+            f"Verbose mode enabled via {'config' if loaded_config.behaviour_settings.verbose_mode else 'CLI flag'}"
+        )
+        logger.add(
+            sys.stderr,
+            format="{time:DD-MM-YYYY_HH:mm:ss} > {name}:{line} > {level}: {message}",
+            level="DEBUG",
+        )
+
+    tasklist_filepath = get_tasklist_filepath(loaded_config)
+    history_data = history.load_history(loaded_config.current_tasklist)
+
+    storage.check_tasklists(loaded_config.tasklists_dir_filepath)
+
+    tasklist, next_id = tasks.initialize_tasks(tasklist_filepath)
+
+    context.obj = ContextObject(
+        loaded_config, tasklist, next_id, tasklist_filepath, history_data
+    )
+    logger.debug(
+        "App initialization done. Put all the variables needed in context.obj",
+    )
 
 
 def main():
