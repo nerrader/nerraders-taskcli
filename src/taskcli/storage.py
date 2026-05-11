@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Any
 from loguru import logger
 from taskcli import constants as const
+from taskcli import history
 
 
 def load_json(filepath: Path) -> Any:
@@ -33,14 +34,14 @@ def check_config_file() -> None:
         logger.debug("Config file wasn't found, set configs to default")
 
 
-def check_histories() -> None:
+def check_history_file(tasklist_name: str) -> None:
     logger.debug("Checking storage for the history file.")
     history_dirpath = const.HISTORY_DIR_FILEPATH
     history_dirpath.mkdir(parents=True, exist_ok=True)
 
-    histories = list(history_dirpath.glob("*.json"))
-    if not histories:
-        write_json(history_dirpath / "main-history.json", const.PLACEHOLDER_HISTORY)
+    history_filepath = history.resolve_history_filepath(tasklist_name)
+    if not history_filepath.is_file():
+        write_json(history_filepath, const.PLACEHOLDER_HISTORY)
 
 
 def check_tasklists(

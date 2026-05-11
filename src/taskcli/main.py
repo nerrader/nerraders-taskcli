@@ -734,7 +734,6 @@ def initialize(
     )
 
     storage.check_config_file()
-    storage.check_histories()
 
     loaded_config: config.Config = config.Config()
     final_verbose_mode: bool = loaded_config.behaviour_settings.verbose_mode or verbose
@@ -751,12 +750,11 @@ def initialize(
             format="{time:DD-MM-YYYY_HH:mm:ss} > {name}:{line} > {level}: {message}",
             level="DEBUG",
         )
-
-    tasklist_filepath = get_tasklist_filepath(loaded_config)
+    storage.check_history_file(loaded_config.current_tasklist)
     history_data = history.load_history(loaded_config.current_tasklist)
 
+    tasklist_filepath = get_tasklist_filepath(loaded_config)
     storage.check_tasklists(loaded_config.tasklists_dir_filepath)
-
     tasklist, next_id = tasks.initialize_tasks(tasklist_filepath)
 
     context.obj = ContextObject(

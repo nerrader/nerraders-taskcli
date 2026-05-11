@@ -1,8 +1,11 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from taskcli import constants as const
 from taskcli import storage
 from taskcli import tasks
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def add_undo_stack(
@@ -23,9 +26,7 @@ def add_redo_stack(
 
 
 def load_history(tasklist_name: str) -> dict[str, list]:
-    raw_loaded_history = storage.load_json(
-        const.HISTORY_DIR_FILEPATH / f"{tasklist_name}-history.json"
-    )
+    raw_loaded_history = storage.load_json(resolve_history_filepath(tasklist_name))
 
     return {
         "undo_stack": [
@@ -63,10 +64,8 @@ def save_history(tasklist_name: str, history: dict[str, list]) -> None:
         ],
     }
 
-    storage.write_json(
-        const.HISTORY_DIR_FILEPATH / f"{tasklist_name}-history.json", serialized_history
-    )
+    storage.write_json(resolve_history_filepath(tasklist_name), serialized_history)
 
 
-# def resolve_history_filepath(tasklist_name: str) -> str:
-#     return const.HISTORY_DIR_FILEPATH / f"{tasklist_name}-history.json"
+def resolve_history_filepath(tasklist_name: str) -> Path:
+    return const.HISTORY_DIR_FILEPATH / f"{tasklist_name}-history.json"
