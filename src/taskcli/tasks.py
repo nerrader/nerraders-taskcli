@@ -299,8 +299,7 @@ def update_task(
     unneccessary things in the updated_contents.
 
     Args:
-        tasklist (list[Task]): the actual tasklist
-        task_id (int): The task ID that is updated.
+        i think the args are pretty self explanatory
         updated_contents (dict[str, Any]): The contents of the tasks that will be updated
     """
     target_task = find_target_task(task_id, tasklist)
@@ -315,11 +314,7 @@ def update_task(
 
 
 def mark_task(tasklist: list[Task], task_id: int, updated_status: str) -> list[Task]:
-    """Marks the targetted task with the new updated_status
-
-    Args:
-        task_id (int): The targetted task
-        updated_status (str): The new updated status
+    """Marks the targetted task with the new updated_status.
 
     Returns:
         list[Task]: The new and updated tasklist
@@ -336,11 +331,19 @@ def clear_tasklist() -> tuple[list, int]:
 
 
 def clear_done_tasks(tasklist: list[Task]) -> list[Task]:
-    """clears all the done tasks, and saves them."""
+    """returns the tasklist but all the done tasks are cleared"""
     return [task for task in tasklist if task.status != "done"]
 
 
-def load_tasks(tasklist_filepath) -> tuple[list[dict[str, Any]], int]:
+def load_tasks(tasklist_filepath: Path) -> tuple[list[dict[str, Any]], int]:
+    """This just loads tasks from the retrospective tasklist json file.
+
+    Args:
+        tasklist_filepath (Path): The tasklist filepath to load the tasks in.
+
+    Returns:
+        tuple[list[dict[str, Any]], int]: _description_
+    """
     data = storage.load_json(tasklist_filepath)
     tasklist = data["tasklist"]
     next_id = data["next_id"]
