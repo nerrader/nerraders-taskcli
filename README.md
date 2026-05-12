@@ -105,6 +105,7 @@ Here are some features that will be planned for **future major/minor releases** 
 - Sub-tasks in tasks
 - Task archiving to expand on the auto_clear_done_tasks config
 - List sorting
+- Testing using `pytest`
 
 # Contributing
 
@@ -150,7 +151,6 @@ This project uses external python libraries to help with the development process
 ### Developer Dependencies
 
 - Mypy: For type checking and error catching.
-- Pip-audit: For checking security vulnerabilities in packages.
 - Pyinstaller: To make the distributable .exe file you are seeing in the releases.
 - Radon: To help with measuring CC and MI in my code.
 - Ruff: For code linting and formatting.

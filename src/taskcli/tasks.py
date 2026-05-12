@@ -181,6 +181,10 @@ def add_task(
     """Adds a task to the tasklist, where the name and the priority provided will be the
     attribute values for the task.
 
+    Args:
+        task_properties (dict[str, Any]): The new task properties, like name or status.
+        everything else is just self explanatory
+
     Returns (inside the tuple):
         int: The next_id
         list[Task]: The new and updated tasklist
@@ -295,6 +299,7 @@ def update_task(
     unneccessary things in the updated_contents.
 
     Args:
+        tasklist (list[Task]): the actual tasklist
         task_id (int): The task ID that is updated.
         updated_contents (dict[str, Any]): The contents of the tasks that will be updated
     """

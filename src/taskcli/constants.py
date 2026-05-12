@@ -12,9 +12,10 @@ APPLOG_FILEPATH: Path = _dirs.user_data_path / "app.log"
 HISTORY_DIR_FILEPATH: Path = _dirs.user_data_path / "histories"
 CONFIG_FILEPATH: Path = _dirs.user_config_path / "config.json"
 
-# usually only for if a task file is empty
+# if task file is empty, write it with this
 PLACEHOLDER_TASKS: dict[str, Any] = {"next_id": 1, "tasklist": []}
 
+# if history file is empty, write it with this
 PLACEHOLDER_HISTORY: dict[str, list] = {"undo_stack": [], "redo_stack": []}
 
 DEFAULT_CONFIG: dict[str, Any] = {

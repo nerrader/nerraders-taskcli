@@ -750,7 +750,9 @@ def initialize(
             format="{time:DD-MM-YYYY_HH:mm:ss} > {name}:{line} > {level}: {message}",
             level="DEBUG",
         )
-    storage.check_history_file(loaded_config.current_tasklist)
+    storage.check_history_file(
+        history.resolve_history_filepath(loaded_config.current_tasklist)
+    )
     history_data = history.load_history(loaded_config.current_tasklist)
 
     tasklist_filepath = get_tasklist_filepath(loaded_config)
