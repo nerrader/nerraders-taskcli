@@ -1,8 +1,7 @@
 from copy import deepcopy
 from dataclasses import dataclass
-from pathlib import Path
 import sys  # we import sys for stderr for loguru specifically
-from typing import Annotated
+from typing import Annotated, TYPE_CHECKING
 
 from loguru import logger  # for logging
 import questionary  # for cli prompts (confirm/selection/checkbox)
@@ -21,6 +20,8 @@ from taskcli import storage
 from taskcli import tasks
 from taskcli import __version__ as taskcli_version
 
+if TYPE_CHECKING:
+    from pathlib import Path
 
 print = const.CONSOLE.print
 app = typer.Typer()
@@ -69,11 +70,8 @@ def add_task(
         ),
     ] = None,
 ) -> None:
-    """Adds a task to the tasklist based on its name, priority, status, and duedates are set to default if not given.
-
-    args are pretty self explanatory wont add them here, except for one:
-    context (typer.Context): The context required to read and write to the needed global variables
-    """
+    """Adds a task to the tasklist based on its name, priority, status, duedates, and tags.
+    Sets those properties to its defaults/None values if none are given."""
     logger.info(
         "User invoked add command",
     )
@@ -131,12 +129,7 @@ def delete_task(
     context: typer.Context,
     task_id: int,
 ) -> None:
-    """Deletes a task based on its ID. Aliases: remove | del | rm
-
-    Args:
-        context (typer.Context): The context required to read and write to the needed global variables
-        task_id (int): The task ID of the given task that the user wants to delete.
-    """
+    """Deletes a task based on its ID. Aliases: remove | del | rm"""
     logger.info("User invoked 'delete' command")
     logger.debug("delete command params", command_params={"task_id": task_id})
     # literally just for the autocomplete really
@@ -146,7 +139,10 @@ def delete_task(
     original_next_id = state.tasklist_next_id
 
     confirm_delete = (
-        questionary.confirm(f"Are you sure you want to delete task ID {task_id}")
+        questionary.confirm(
+            f"Are you sure you want to delete task ID {task_id}",
+            style=const.QUESTIONARY_STYLE,
+        )
         .skip_if(
             not state.config.behaviour_settings.require_delete_confirmation,
             default=True,
@@ -199,11 +195,8 @@ def update_task(
         ),
     ] = None,
 ) -> None:
-    """Updates a specific task given task ID. You can update the priority and duedate of the task. Does not allow updating statuses, use the mark command instead.
-
-    Args:
-        context (typer.Context): The context required to read and write to the needed global variables
-        Other args are pretty self explanatory.
+    """Updates a specific task given task ID. You can update the priority, duedate and tags of the task.
+    Does not allow updating statuses, use the mark command instead.
     """
     logger.info(
         "User invoked 'update' command",
@@ -257,13 +250,7 @@ def mark_task(
         str, typer.Argument(help="The updated status of the task ID given by the user")
     ],
 ) -> None:
-    """Updates a task's status based on task ID.
-
-    Args:
-        context (typer.Context): The context required to read and write to the needed global variables
-        task_id (int): The task ID given by the user
-        updated_status (str): The updated status given by the user
-    """
+    """Updates a task's status by updated_status based on task ID"""
     logger.info("User invoked 'mark' command")
     logger.debug(
         "mark command params",
@@ -302,7 +289,7 @@ def _get_styled_attribute(
     """It gets the rich styled string (with colors) associated with the attribute,
     required for display_tasks_table()
 
-    NOTE: This is meant to be used only in display_tasks_table(), using it elsewhere might causes unwanted results.
+    NOTE: This is meant to be used only in display_tasks_table(), using it elsewhere might cause unwanted results.
 
     Args:
         attribute (str): The attribute you want to change.
@@ -325,25 +312,13 @@ def _get_styled_attribute(
         case "status":
             styled_status = f"[white]{task.status}[/]"
             if config.behaviour_settings.show_status_colors:
-                status_colors: dict[str, str] = {
-                    "on-hold": "dim",
-                    "todo": "white",
-                    "doing": "bold blue",
-                    "done": "green4",
-                }
-                styled_status = f"[{status_colors[task.status]}]{task.status}[/]"
+                styled_status = f"[{const.STATUS_COLORS[task.status]}]{task.status}[/]"
             return styled_status
         case "priority":
             styled_priority = f"[white]{task.priority}[/]"
             if config.behaviour_settings.show_priority_colors:
-                priority_colors: dict[str, str] = {
-                    "low": "green",
-                    "medium": "yellow",
-                    "high": "red",
-                    "urgent": "bold red3",
-                }
                 styled_priority = (
-                    f"[{priority_colors[task.priority]}]{task.priority}[/]"
+                    f"[{const.PRIORITY_COLORS[task.priority]}]{task.priority}[/]"
                 )
             return styled_priority
         case "duedate":
@@ -359,13 +334,11 @@ def _get_styled_attribute(
 
 def _validate_filters(filters: dict[str, str | None]) -> dict[str, str]:
     """NOTE: This function should only be used in display_tasks_table()
+    This validates the listing filters given by the user.
+    Raises ValueErrors if status/priority given is invalid.
 
     Args:
         filters (dict[str, str | None]): The filters passed in by the user in the app.command() options
-
-    Raises:
-        ValueError: If the status provided by the user is invalid, raise this error.
-        ValueError: If the priority provided by the user is invalid, raise this error.
 
     Returns:
         dict[str, str]: The validated filter, removing none or empty values, and only returning valid ones.
@@ -478,12 +451,7 @@ def clear_tasks(
         typer.Option("--confirm", "-c", help="Skips the confirmation prompt"),
     ] = False,
 ) -> None:
-    """Asks a confirmation prompt first, then if they confirm, clear the tasklist.
-
-    Args:
-        context (typer.Context): The context required to read and write to the needed global variables
-        confirm (bool): Defaults to False, if value is false, then confirmation is still required, otherwise, skip the prompt
-    """
+    """Asks a confirmation prompt first, then if they confirm, clear the tasklist."""
     # literally just for the autocomplete really
     logger.info("User invoked 'clear' command")
     logger.debug(f"clear command params: ['clear_confirm': {confirm}]")
@@ -493,7 +461,10 @@ def clear_tasks(
     original_next_id = state.tasklist_next_id
 
     confirm_clear: bool = (
-        questionary.confirm("Are you sure you want to clear the entire tasklist?")
+        questionary.confirm(
+            "Are you sure you want to clear the entire tasklist?",
+            style=const.QUESTIONARY_STYLE,
+        )
         .skip_if(
             not state.config.behaviour_settings.require_clear_confirmation or confirm,
             True,
@@ -518,15 +489,11 @@ def clear_tasks(
 
 @app.command("config")
 def config_cli(context: typer.Context) -> None:
-    """To configure the TaskCLI settings.
-
-    Args:
-        context (typer.Context): The needed context to access and change the global variables.
-    """
+    """To configure the TaskCLI settings."""
     logger.info("User invoked 'config' command")
 
     state: ContextObject = context.obj
-    state.config.main_configuration_ui()
+    config.main_configuration_ui(state.config)
 
 
 @app.command("undo")
@@ -613,11 +580,7 @@ def add_tasklist(
     context: typer.Context,
     name: Annotated[list[str], typer.Argument(help="The new tasklist name.")],
 ):
-    """Adds a new tasklist which you can switch to using the switch command.
-
-    Args:
-        name (str): The new tasklist's name.
-    """
+    """Adds a new tasklist based on the name given by the user which you can switch to using the switch command."""
     state: ContextObject = context.obj  # just for the autocomplete really
     logger.info("User invoked 'tasklist add' command.")
 
@@ -637,7 +600,7 @@ def delete_tasklist(
         list[str], typer.Argument(help="The name of the tasklist that will be deleted.")
     ],
 ):
-    """Deletes a tasklist. Aliases: remove | del | rm"""
+    """Deletes a tasklist based off name given by the user. Aliases: remove | del | rm"""
     state: ContextObject = context.obj  # just for the autocomplete really
     logger.info("User invoked 'tasklist delete' command.")
 
@@ -717,7 +680,6 @@ def initialize(
 
     # Args:
     #     context (typer.Context): Context object used by typer. You must use context.obj to store persistent values.
-    #
 
     if version:
         print(f"v{taskcli_version}")

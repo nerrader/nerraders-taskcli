@@ -4,8 +4,8 @@ from typing import Any
 from platformdirs import PlatformDirs
 from rich.theme import Theme
 from rich.console import Console
+from questionary import Style
 
-# some path variables
 _dirs = PlatformDirs("TaskCLI", appauthor="nerrader")
 MAIN_FILEPATH: Path = _dirs.user_data_path
 APPLOG_FILEPATH: Path = _dirs.user_data_path / "app.log"
@@ -35,13 +35,32 @@ DEFAULT_CONFIG: dict[str, Any] = {
     },
 }
 
-
-# tasks things
 VALID_PRIORITIES: tuple[str, str, str, str] = ("low", "medium", "high", "urgent")
 VALID_STATUSES: tuple[str, str, str, str] = ("on-hold", "todo", "doing", "done")
 
-# rich styling things
+PRIORITY_COLORS: dict[str, str] = {
+    "low": "green",
+    "medium": "yellow",
+    "high": "red",
+    "urgent": "bold red3",
+}
+STATUS_COLORS: dict[str, str] = {
+    "on-hold": "dim",
+    "todo": "white",
+    "doing": "bold blue",
+    "done": "green4",
+}
+
 CUSTOM_THEME = Theme(
     {"error": "red", "success": "green", "info": "blue", "warning": "yellow"}
 )
 CONSOLE = Console(theme=CUSTOM_THEME)
+
+QUESTIONARY_STYLE = Style(
+    [
+        ("disabled", "#858585"),
+        ("selected", "fg:#00d7ff"),
+        ("highlighted", "fg:yellow"),
+        ("pointer", "fg:yellow bold"),
+    ]
+)

@@ -37,7 +37,6 @@ class BehaviourConfig:
 
 
 class Config:
-    # These are the valid values for the visible_columns setting, it is a list of these values most of the time.
     VALID_VISIBLE_COLUMNS: tuple[str, str, str, str, str, str] = (
         "ID",
         "Name",
@@ -72,7 +71,7 @@ class Config:
                 "Could not set the new visible columns list as it had nothing to begin with, or it wasn't a list"
             )
             raise TypeError("The new visible columns settings have nothing.")
-        # if there is an item in the visible columns list that is not in the valid_visible_columns constant defined in the class
+
         invalid_column = next(
             (
                 column
@@ -115,11 +114,18 @@ class Config:
     def behaviour_settings(self):
         return self._behaviour_settings
 
+    @behaviour_settings.setter
+    def behaviour_settings(self, new_behaviour_settings):
+        if not isinstance(new_behaviour_settings, BehaviourConfig):
+            raise TypeError(
+                "The new behaviour config is not of dataclass 'BehaviourConfig'."
+            )
+        self._behaviour_settings = new_behaviour_settings
+
     def load_configs(self) -> dict:
         config_json: dict = storage.load_json(const.CONFIG_FILEPATH)
         return config_json
 
-    # pretty self explanatory i think
     def save_config(self):
         data = {
             "visible_columns": self._visible_columns,
@@ -130,113 +136,6 @@ class Config:
         }
         storage.write_json(const.CONFIG_FILEPATH, data)
         logger.success("Successfully saved configs")
-
-    def _configure_table_column_visibility(self) -> None:
-        """
-        NOTE: THIS FUNCTION SHOULD ONLY BE CALLED IN main_configuration_ui()
-
-        asks the user for which columns should be visible during the list_tasks() using a questionary.checkbox
-        prompt, then saves that result directly in self.visible_columnss
-        """
-        logger.debug("User navigated to the configure table column visibility menu")
-        new_visible_columns = questionary.checkbox(
-            "What columns do you want enabled when tasks are being listed?",
-            choices=[
-                questionary.Choice(
-                    title=column_name, checked=column_name in self.visible_columns
-                )
-                for column_name in self.VALID_VISIBLE_COLUMNS
-            ],
-        ).ask()
-        # to check if the user did a ctrl + c, and to stop it being overriden if so
-        if new_visible_columns:
-            self.visible_columns = new_visible_columns
-            logger.info(f"Changed visible columns: {new_visible_columns}")
-        else:
-            logger.info("User cancelled visible columns change")
-
-    def _configre_default_priority(self) -> None:
-        """NOTE: THIS SHOULD ONLY BE USED ON main_configuration_ui()
-
-        Configures the default priority using a questionary.select() prompt
-        """
-        logger.debug("User navigated to the configure default priority menu")
-        new_default_priority = questionary.select(
-            "What should be your new default priority when creating tasks?",
-            choices=("low", "medium", "high", "urgent"),
-        ).ask()
-
-        # checks for ctrl + c, because it returns none if it got cancelled
-        if new_default_priority:
-            self.default_priority = new_default_priority
-            logger.info(f"User changed default priority to {new_default_priority}")
-        else:
-            logger.info("User cancelled default priority changes")
-
-    def _configure_tasklist_filepath(self) -> None:
-        """NOTE: THIS SHOULD ONLY BE USED ON main_configuration_ui()
-
-        Configures the tasklist filepath directory used to store your tasklists, using questionary.path()
-        to ask the user where to store it.
-        """
-        logger.debug("User navigated to the configure tasklist filepath menu")
-        print("TIP: You can press the 'Tab' key for autocomplete.", style="info")
-        print(
-            "TIP: You can go into file explorer and copy and paste the path there instead.",
-            style="info",
-        )
-        new_tasklist_filepath = questionary.path(
-            "What should the new folderpath be for storing your tasklists?",
-            only_directories=True,
-            validate=lambda filepath: (
-                Path(filepath).is_dir()
-                if filepath
-                else "Please enter a valid directory."
-            ),
-        ).ask()
-
-        # checks for ctrl + c, because it returns none if it got cancelled
-        if new_tasklist_filepath:
-            self.tasklists_dir_filepath = Path(new_tasklist_filepath)
-            logger.info(
-                f"User changed the tasklist folderpath to {new_tasklist_filepath}"
-            )
-        else:
-            logger.info("User cancelled tasklist folderpath changes")
-
-    def _configure_behaviour_settings(self) -> None:
-        """NOTE: THIS SHOULD ONLY BE USED ON main_configuration_ui()
-
-        Configures the behaviour settings using questionary.checkbox()
-        """
-        logger.debug("User navigated to the configure behaviour settings menu")
-        behaviour_setting_names: list[str] = [
-            setting
-            for setting in (field.name for field in fields(self.behaviour_settings))
-        ]
-
-        behaviour_setting_selection = questionary.checkbox(
-            "Behaviour Settings:",
-            choices=[
-                questionary.Choice(
-                    # turns all words capitalized, and replaces "_" with spaces
-                    title=setting.replace("_", " ").title(),
-                    value=setting,
-                    checked=getattr(self.behaviour_settings, setting),
-                )
-                for setting in behaviour_setting_names
-            ],
-        ).ask()
-
-        # check for ctrl c cancels
-        if behaviour_setting_selection is None:
-            return
-
-        for behaviour_setting in behaviour_setting_names:
-            if behaviour_setting in behaviour_setting_selection:
-                setattr(self.behaviour_settings, behaviour_setting, True)
-                continue
-            setattr(self.behaviour_settings, behaviour_setting, False)
 
     def reset_defaults(self) -> None:
         """
@@ -251,67 +150,197 @@ class Config:
         self._behaviour_settings = BehaviourConfig(**defaults["behaviour_settings"])
         logger.info("User has reset the configuration settings back to default.")
 
-    def _save_and_exit(self, original_config: "Config") -> None:
-        """This function checks if the tasklists dir filepath has changed, and asks the user
 
-        Args:
-            original_config (Config): The original config
+def _configure_table_column_visibility(current_visible_columns: list[str]) -> list[str]:
+    """
+    NOTE: THIS FUNCTION SHOULD ONLY BE CALLED IN main_configuration_ui()
 
-        Raises:
-            ValueError: If the new config taskslist filepath is not a directory, raise this error.
-        """
+    asks the user for which columns should be visible during the list_tasks() using a questionary.checkbox
+    prompt, then saves that result directly in self.visible_columnss
+    """
+    logger.debug("User navigated to the configure table column visibility menu")
+    new_visible_columns = questionary.checkbox(
+        "What columns do you want enabled when tasks are being listed?",
+        choices=[
+            questionary.Choice(
+                title=column_name, checked=column_name in current_visible_columns
+            )
+            for column_name in Config.VALID_VISIBLE_COLUMNS
+        ],
+        style=const.QUESTIONARY_STYLE,
+    ).ask()
 
-        # if new configs for tasklist folderpath are the same as the old ones
-        if original_config.tasklists_dir_filepath == self.tasklists_dir_filepath:
-            self.save_config()
-            return
+    # to check if the user did a ctrl + c, and to stop it being overriden if so
+    if new_visible_columns:
+        logger.info(f"Changed visible columns: {new_visible_columns}")
+        return new_visible_columns
+    else:
+        logger.info("User cancelled visible columns change")
+        return current_visible_columns
 
-        move_tasklists = questionary.confirm(
-            "Do you want to move all your existing tasklists into the new folder?"
+
+def _configure_default_priority(current_default_priority: str) -> str:
+    """NOTE: THIS SHOULD ONLY BE USED ON main_configuration_ui()
+
+    Configures the default priority using a questionary.select() prompt
+    """
+    logger.debug("User navigated to the configure default priority menu")
+    new_default_priority = questionary.select(
+        "What should be your new default priority when creating tasks?",
+        choices=("low", "medium", "high", "urgent"),
+        default=current_default_priority,
+        style=const.QUESTIONARY_STYLE,
+    ).ask()
+
+    # checks for ctrl + c, because it returns none if it got cancelled
+    if new_default_priority:
+        logger.info(f"User changed default priority to {new_default_priority}")
+        return new_default_priority
+    else:
+        logger.info("User cancelled default priority changes")
+        return current_default_priority
+
+
+def _configure_tasklist_filepath(current_tasklist_dir_filepath: Path) -> Path:
+    """NOTE: THIS SHOULD ONLY BE USED ON main_configuration_ui()
+
+    Configures the tasklist filepath directory used to store your tasklists, using questionary.path()
+    to ask the user where to store it.
+    """
+    logger.debug("User navigated to the configure tasklist filepath menu")
+    print("TIP: You can press the 'Tab' key for autocomplete.", style="info")
+    print(
+        "TIP: You can go into file explorer and copy and paste the path there instead.",
+        style="info",
+    )
+    new_tasklist_filepath = questionary.path(
+        "What should the new folderpath be for storing your tasklists?",
+        only_directories=True,
+        validate=lambda filepath: (
+            Path(filepath).is_dir() if filepath else "Please enter a valid directory."
+        ),
+        default=str(current_tasklist_dir_filepath),
+        style=const.QUESTIONARY_STYLE,
+    ).ask()
+
+    # checks for ctrl + c, because it returns none if it got cancelled
+    if new_tasklist_filepath:
+        logger.info(f"User changed the tasklist folderpath to {new_tasklist_filepath}")
+        return Path(new_tasklist_filepath)
+    else:
+        logger.info("User cancelled tasklist folderpath changes")
+        return current_tasklist_dir_filepath
+
+
+def _configure_behaviour_settings(
+    current_behaviour_settings: BehaviourConfig,
+) -> BehaviourConfig:
+    """NOTE: THIS SHOULD ONLY BE USED ON main_configuration_ui()
+
+    Configures the behaviour settings using questionary.checkbox()
+    """
+    logger.debug("User navigated to the configure behaviour settings menu")
+    new_behaviour_settings: BehaviourConfig = deepcopy(current_behaviour_settings)
+
+    behaviour_setting_names: list[str] = [
+        field.name for field in fields(new_behaviour_settings)
+    ]
+
+    behaviour_setting_selection = questionary.checkbox(
+        "Behaviour Settings:",
+        choices=[
+            questionary.Choice(
+                title=setting.replace("_", " ").title(),
+                value=setting,
+                checked=getattr(new_behaviour_settings, setting),
+            )
+            for setting in behaviour_setting_names
+        ],
+        style=const.QUESTIONARY_STYLE,
+    ).ask()
+
+    # check for ctrl c cancels
+    if behaviour_setting_selection is None:
+        return current_behaviour_settings
+
+    for behaviour_setting in behaviour_setting_names:
+        if behaviour_setting in behaviour_setting_selection:
+            setattr(new_behaviour_settings, behaviour_setting, True)
+            continue
+        setattr(new_behaviour_settings, behaviour_setting, False)
+    return new_behaviour_settings
+
+
+def _save_and_exit(new_config: Config, original_config: Config) -> None:
+    """This function checks if the tasklists dir filepath has changed, and asks the user
+
+    Args:
+        original_config (Config): The original config
+
+    Raises:
+        ValueError: If the new config taskslist filepath is not a directory, raise this error.
+    """
+
+    if original_config.tasklists_dir_filepath == new_config.tasklists_dir_filepath:
+        new_config.save_config()
+        return
+
+    move_tasklists = questionary.confirm(
+        "Do you want to move all your existing tasklists into the new folder?",
+        style=const.QUESTIONARY_STYLE,
+    ).ask()
+
+    if move_tasklists:
+        for filepath in original_config.tasklists_dir_filepath.iterdir():
+            filepath.move_into(new_config.tasklists_dir_filepath)
+        print("Successfully changed the tasklists folderpath!", style="success")
+    new_config.save_config()
+
+
+def main_configuration_ui(original_config: Config) -> None:
+    """pretty self explanatory, it creates the main configuration ui"""
+    logger.info("User entered main setting configuration UI")
+
+    # im getting a new config specifically for _save_and_exit()
+    new_config = deepcopy(original_config)
+    while True:
+        main_selection = questionary.select(
+            "Which setting do you want to configure?",
+            choices=(
+                "Table Column Visibility",
+                "Default Task Priority",
+                "Change Tasklists Folder",
+                "Other Behaviour Settings",
+                questionary.Separator(),
+                "Save and Exit",
+                "Set Defaults",
+                "Cancel All Changes",
+            ),
+            style=const.QUESTIONARY_STYLE,
         ).ask()
 
-        if move_tasklists:
-            for filepath in original_config.tasklists_dir_filepath.iterdir():
-                filepath.move_into(self.tasklists_dir_filepath)
-            print("Successfully changed the tasklists folderpath!", style="success")
-        self.save_config()
-
-    def main_configuration_ui(self) -> None:
-        """pretty self explanatory, it creates the main configuration ui"""
-        # why dont you make a new_config variable?
-        # well because if i cancel, the config wouldnt save anyway, and unless i decided to
-        # make this app persistent, it will never save between sessions unless you save it first
-        logger.info("User entered main setting configuration UI")
-        original_config = deepcopy(self)
-        while True:
-            main_selection = questionary.select(
-                "Which setting do you want to configure?",
-                choices=(
-                    "Table Column Visibility",
-                    "Default Task Priority",
-                    "Change Tasklists Folder",
-                    "Other Behaviour Settings",
-                    questionary.Separator(),
-                    "Save and Exit",
-                    "Set Defaults",
-                    "Cancel All Changes",
-                ),
-            ).ask()
-
-            match main_selection:
-                case "Table Column Visibility":
-                    self._configure_table_column_visibility()
-                case "Default Task Priority":
-                    self._configre_default_priority()
-                case "Change Tasklists Folder":
-                    self._configure_tasklist_filepath()
-                case "Other Behaviour Settings":
-                    self._configure_behaviour_settings()
-                case "Save and Exit":
-                    self._save_and_exit(original_config)
-                    return
-                case "Set Defaults":
-                    self.reset_defaults()
-                case "Cancel All Changes":
-                    logger.info("User cancelled all changes")
-                    return
+        match main_selection:
+            case "Table Column Visibility":
+                new_config.visible_columns = _configure_table_column_visibility(
+                    new_config.visible_columns
+                )
+            case "Default Task Priority":
+                new_config.default_priority = _configure_default_priority(
+                    new_config.default_priority
+                )
+            case "Change Tasklists Folder":
+                new_config.tasklists_dir_filepath = _configure_tasklist_filepath(
+                    new_config.tasklists_dir_filepath
+                )
+            case "Other Behaviour Settings":
+                new_config.behaviour_settings = _configure_behaviour_settings(
+                    new_config.behaviour_settings
+                )
+            case "Save and Exit":
+                _save_and_exit(new_config, original_config)
+                return
+            case "Set Defaults":
+                new_config.reset_defaults()
+            case "Cancel All Changes":
+                logger.info("User cancelled all changes")
+                return
