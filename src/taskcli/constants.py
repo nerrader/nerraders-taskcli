@@ -2,9 +2,10 @@ from pathlib import Path
 from typing import Any
 
 from platformdirs import PlatformDirs
+
+from questionary import Style
 from rich.theme import Theme
 from rich.console import Console
-from questionary import Style
 
 _dirs = PlatformDirs("TaskCLI", appauthor="nerrader")
 MAIN_FILEPATH: Path = _dirs.user_data_path

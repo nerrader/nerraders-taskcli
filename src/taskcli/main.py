@@ -637,16 +637,14 @@ def switch_tasklists(
     ],
 ):
     state: ContextObject = context.obj  # just for the autocomplete really
-
-    joined_name: str = (" ".join(name)).strip()
-    if joined_name not in tasks.get_tasklists(state.config.tasklists_dir_filepath):
-        raise ValueError(f"Invalid tasklist name, as it doesn't exist: {joined_name}")
-
-    state.config.current_tasklist = joined_name
+    switched_tasklist = tasks.switch_tasklists(
+        name, state.config.tasklists_dir_filepath
+    )
+    state.config.current_tasklist = switched_tasklist
     state.config.save_config()
 
-    print(f"\nSwitched to tasklist: {joined_name}.\n", style="info")
-    logger.info(f"User switch to tasklist '{joined_name}'")
+    print(f"\nSwitched to tasklist: {switched_tasklist}.\n", style="info")
+    logger.info(f"User switch to tasklist '{switched_tasklist}'")
 
 
 @tasklist_command.command("list")
@@ -654,11 +652,11 @@ def switch_tasklists(
 @tasklist_command.command("ls", hidden=True)
 def list_tasklists(context: typer.Context):
     state: ContextObject = context.obj  # just for the autocomplete really
-
-    for tasklist in tasks.get_tasklists(state.config.tasklists_dir_filepath):
-        print(
-            f"- {tasklist} {'(CURRENT)' if tasklist == state.config.current_tasklist else ''}"
+    print(
+        tasks.list_tasklists(
+            state.config.tasklists_dir_filepath, state.config.current_tasklist
         )
+    )
 
 
 @app.callback(invoke_without_command=True)

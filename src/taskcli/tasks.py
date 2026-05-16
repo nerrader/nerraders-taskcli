@@ -116,7 +116,7 @@ class Task:
         self._status = new_status
 
 
-def find_target_task(target_id: int, tasklist: list[Task]) -> Task:
+def _find_target_task(target_id: int, tasklist: list[Task]) -> Task:
     """Finds the target task according to the target id passed as an argument,
     then sends the entire dictionary of the task with that ID
 
@@ -130,7 +130,7 @@ def find_target_task(target_id: int, tasklist: list[Task]) -> Task:
     return target_task
 
 
-def parse_duedate(original_duedate: str) -> dt:
+def _parse_duedate(original_duedate: str) -> dt:
     """Validates the duedate by running it through a dateparser function, and catching if it returns None.
 
     Args:
@@ -157,7 +157,7 @@ def parse_duedate(original_duedate: str) -> dt:
     return parsed_duedate
 
 
-def string_split_comma(text: str) -> list[str]:
+def _string_split_comma(text: str) -> list[str]:
     """Splits a string (with commas) into a list of stripped strings.
     If the resulted string from splitting it is falsy, it will not be in the list
 
@@ -201,7 +201,7 @@ def add_task(
     joined_name: str = (" ".join(raw_name)).strip()
     parsed_duedate: dt | None = None
     if raw_duedate:
-        parsed_duedate = parse_duedate(raw_duedate)
+        parsed_duedate = _parse_duedate(raw_duedate)
 
     # refining the variables with defaults if none
     if not raw_priority:
@@ -214,7 +214,7 @@ def add_task(
         logger.debug("Successfully set status to 'todo' (default)", data=status)
     list_tags: list[str] | None = None
     if raw_tags:
-        list_tags = string_split_comma(raw_tags)
+        list_tags = _string_split_comma(raw_tags)
 
     new_task: Task = Task(
         next_id,
@@ -232,13 +232,13 @@ def add_task(
 
 
 def delete_task(tasklist: list[Task], task_id: int) -> list[Task]:
-    """Finds the task with the task_id in passed in using find_target_task(), then removes
+    """Finds the task with the task_id in passed in using _find_target_task(), then removes
     it from the self.tasklist
 
     Args:
         task_id (int): The target ID
     """
-    target_task = find_target_task(task_id, tasklist)
+    target_task = _find_target_task(task_id, tasklist)
 
     return [task for task in tasklist if task != target_task]
 
@@ -272,9 +272,9 @@ def _validate_update_contents(
         ),
         "priority": lambda priority: priority.strip(),
         "duedate": lambda duedate: (
-            None if is_reset(duedate) else parse_duedate(duedate)
+            None if is_reset(duedate) else _parse_duedate(duedate)
         ),
-        "tags": lambda tags: None if is_reset(tags) else string_split_comma(tags),
+        "tags": lambda tags: None if is_reset(tags) else _string_split_comma(tags),
     }
 
     validated_update_contents = {
@@ -302,7 +302,7 @@ def update_task(
         i think the args are pretty self explanatory
         updated_contents (dict[str, Any]): The contents of the tasks that will be updated
     """
-    target_task = find_target_task(task_id, tasklist)
+    target_task = _find_target_task(task_id, tasklist)
 
     updated_contents = _validate_update_contents(updated_contents)
 
@@ -319,7 +319,7 @@ def mark_task(tasklist: list[Task], task_id: int, updated_status: str) -> list[T
     Returns:
         list[Task]: The new and updated tasklist
     """
-    target_task = find_target_task(task_id, tasklist)
+    target_task = _find_target_task(task_id, tasklist)
     target_task.status = updated_status
 
     return [target_task if task.id == task_id else task for task in tasklist]
@@ -411,40 +411,24 @@ def save_tasks(tasklist_filepath, tasklist: list[Task], next_id: int) -> None:
     logger.success(f"Successfully saved tasks to {tasklist_filepath}")
 
 
-def get_tasklists(taskslist_dir: Path) -> list[str]:
+def _get_tasklists(taskslist_dir: Path) -> list[str]:
     """Always returns a fresh list of available tasklist names from disk."""
     return [file.stem for file in taskslist_dir.glob("*.json")]
 
 
-def resolve_tasklist_path(tasklist_dir: Path, name: str) -> Path:
+def _resolve_tasklist_path(tasklist_dir: Path, name: str) -> Path:
     """Returns the combined tasklist directory and name, ensuring a .json extension."""
     return (tasklist_dir / name).with_suffix(".json")
 
 
 def add_tasklist(tasklist_name: str, tasklist_directory: Path) -> None:
-    """Adds a tasklist
-
-    Args:
-        tasklist_name (str): The new tasklist name added
-        tasklist_directory (Path): The directory where you store the tasklists.
-    """
     tasklist_path = tasklist_name / tasklist_directory
     storage.write_json(tasklist_path, const.PLACEHOLDER_TASKS)
 
 
 def delete_tasklist(tasklist_name: str, tasklist_directory: Path) -> None:
-    """Deletes a tasklist
-
-    Args:
-        tasklist_name (str): The name of the tasklist being deleted
-        tasklist_directory (Path): The directory where you store the tasklists
-
-    Raises:
-        ValueError: If the tasklist name is not apart of a real tasklist, raise this error.
-        ValueError: If removing this tasklist would mean that the user has no more tasklists, raise this error.
-    """
-    tasklists = get_tasklists(tasklist_directory)
-    tasklist_filepath = resolve_tasklist_path(tasklist_directory, tasklist_name)
+    tasklists = _get_tasklists(tasklist_directory)
+    tasklist_filepath = _resolve_tasklist_path(tasklist_directory, tasklist_name)
     if tasklist_name not in tasklists:
         raise ValueError(
             f"Tasklist name is not valid as it is not a real tasklist: {tasklist_name}"
@@ -461,18 +445,30 @@ def rename_tasklist(
     new_tasklist_name: str,
     tasklist_directory: Path,
 ) -> None:
-    """Renames a tasklist called old_tasklist_name to new_tasklist_name
-
-    i feel like args are self explanatory
-
-    Raises:
-        ValueError: If the old_tasklist_name does not exist, raise this error.
-    """
-    if old_tasklist_name not in get_tasklists(tasklist_directory):
+    if old_tasklist_name not in _get_tasklists(tasklist_directory):
         raise ValueError(
             f"Tasklist name is not valid as it is not a real tasklist: {old_tasklist_name}"
         )
 
-    resolve_tasklist_path(tasklist_directory, old_tasklist_name).rename(
-        resolve_tasklist_path(tasklist_directory, new_tasklist_name)
+    _resolve_tasklist_path(tasklist_directory, old_tasklist_name).rename(
+        _resolve_tasklist_path(tasklist_directory, new_tasklist_name)
     )
+
+
+def switch_tasklists(tasklist_name: list[str], tasklists_dir_filepath: Path) -> str:
+    joined_tasklist_name: str = (" ".join(tasklist_name)).strip()
+    if joined_tasklist_name not in _get_tasklists(tasklists_dir_filepath):
+        raise ValueError(
+            f"Invalid tasklist name, as it doesn't exist: {joined_tasklist_name}"
+        )
+
+    return joined_tasklist_name
+
+
+def list_tasklists(tasklists_dir_filepath: Path, current_tasklist: str) -> str:
+    tasklists_message: str = ""
+    for tasklist in _get_tasklists(tasklists_dir_filepath):
+        tasklists_message += (
+            f"- {tasklist} {'(CURRENT)' if tasklist == current_tasklist else ''}\n"
+        )
+    return tasklists_message.strip()
