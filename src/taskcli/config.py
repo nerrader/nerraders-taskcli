@@ -58,7 +58,7 @@ class Config:
         )
 
     @property
-    def visible_columns(self):
+    def visible_columns(self) -> list[str]:
         return self._visible_columns
 
     @visible_columns.setter
@@ -93,11 +93,11 @@ class Config:
         )
 
     @property
-    def default_priority(self):
+    def default_priority(self) -> str:
         return self._default_priority
 
     @default_priority.setter
-    def default_priority(self, new_default: str):
+    def default_priority(self, new_default: str) -> None:
         if (
             not isinstance(new_default, str)
             or new_default not in const.VALID_PRIORITIES
@@ -111,11 +111,11 @@ class Config:
         self._default_priority = new_default
 
     @property
-    def behaviour_settings(self):
+    def behaviour_settings(self) -> BehaviourConfig:
         return self._behaviour_settings
 
     @behaviour_settings.setter
-    def behaviour_settings(self, new_behaviour_settings):
+    def behaviour_settings(self, new_behaviour_settings: BehaviourConfig) -> None:
         if not isinstance(new_behaviour_settings, BehaviourConfig):
             raise TypeError(
                 "The new behaviour config is not of dataclass 'BehaviourConfig'."
@@ -143,11 +143,11 @@ class Config:
         name is self explanatory i think
         """
         defaults = const.DEFAULT_CONFIG
-        self.visible_columns: list[str] = defaults["visible_columns"]
-        self.default_priority: str = defaults["default_priority"]
+        self.visible_columns = defaults["visible_columns"]
+        self.default_priority = defaults["default_priority"]
         self.current_tasklist = defaults["current_tasklist"]
         self.tasklists_dir_filepath = defaults["tasklists_dir_filepath"]
-        self._behaviour_settings = BehaviourConfig(**defaults["behaviour_settings"])
+        self.behaviour_settings = BehaviourConfig(**defaults["behaviour_settings"])
         logger.info("User has reset the configuration settings back to default.")
 
 
