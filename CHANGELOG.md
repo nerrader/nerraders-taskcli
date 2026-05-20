@@ -1,3 +1,8 @@
+# v3.0.1 - 20/5/2026
+- Refactored most of config.py to make the configuration wizard outside the class.
+- Added the new questionary style to more prompts for consistency.
+- Fixed the bug where the `add tasklists` command wasn't working.
+
 # v3.0.0 - 12/5/2026
 - Refactored most of the codebase to get rid of the redundant `TasklistManager` and `ListManager` class in tasks.py to switch to more functional programming.
 - Added a new constants.py file to remove unnecessary dependency injection.
