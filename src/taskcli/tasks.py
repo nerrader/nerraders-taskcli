@@ -191,30 +191,30 @@ def add_task(
         Task: The new task that was created
     """
     # variable initialization
-    raw_name: list[str] = task_properties["name"]
-    raw_status: str | None = task_properties["status"]
-    raw_priority: str | None = task_properties["priority"]
-    raw_duedate: str | None = task_properties["duedate"]
-    raw_tags: str | None = task_properties["tags"]
+    name: list[str] = task_properties["name"]
+    status: str | None = task_properties["status"]
+    priority: str | None = task_properties["priority"]
+    duedate: str | None = task_properties["duedate"]
+    tags: str | None = task_properties["tags"]
 
     # checking and refining the variables
-    joined_name: str = (" ".join(raw_name)).strip()
+    joined_name: str = (" ".join(name)).strip()
     parsed_duedate: dt | None = None
-    if raw_duedate:
-        parsed_duedate = _parse_duedate(raw_duedate)
+    if duedate:
+        parsed_duedate = _parse_duedate(duedate)
 
     # refining the variables with defaults if none
-    if not raw_priority:
-        logger.debug("No priority found in add task function.", data=raw_priority)
+    if not priority:
+        logger.debug("No priority found in add task function.", data=priority)
         priority = configs.default_priority
         logger.debug("Successfully set priority to default priority", data=priority)
-    if not raw_status:
+    if not status:
         logger.debug("No status found in add task function.")
         status = "todo"
         logger.debug("Successfully set status to 'todo' (default)", data=status)
     list_tags: list[str] | None = None
-    if raw_tags:
-        list_tags = _string_split_comma(raw_tags)
+    if tags:
+        list_tags = _string_split_comma(tags)
 
     new_task: Task = Task(
         next_id,
@@ -422,7 +422,7 @@ def _resolve_tasklist_path(tasklist_dir: Path, name: str) -> Path:
 
 
 def add_tasklist(tasklist_name: str, tasklist_directory: Path) -> None:
-    tasklist_path = tasklist_name / tasklist_directory
+    tasklist_path = _resolve_tasklist_path(tasklist_directory, tasklist_name)
     storage.write_json(tasklist_path, const.PLACEHOLDER_TASKS)
 
 
