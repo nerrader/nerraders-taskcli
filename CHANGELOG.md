@@ -5,13 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## v3.0.1 - 20/5/2026
+## [Unreleased]
+
+- Improved README.md layout and formatting
+
+## [3.0.1] - 2026-05-20
 
 - Refactored most of config.py to make the configuration wizard outside the class.
 - Added the new questionary style to more prompts for consistency.
 - Fixed the bug where the `add tasklists` command wasn't working.
 
-## v3.0.0 - 12/5/2026
+## [3.0.0] - 2026-05-12
 
 - Refactored most of the codebase to get rid of the redundant `TasklistManager` and `ListManager` class in tasks.py to switch to more functional programming.
 - Added a new constants.py file to remove unnecessary dependency injection.
@@ -27,7 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Enhanced the README.md with better quick usage commmands and more information clarity for new users.
 - Fixed some dependency vulnerabilities found by dependabot by updating some specific packages to the latest version.
 
-## v2.1.0 - 5/5/2026
+## [2.1.0] - 2026-05-05
 
 - Added compatibility for other OSes such as Linux and macOS.
 - Added platformdirs module to help with developing the multi OS compatibility feature.
@@ -37,7 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added an `__init__.py` to make it a regular package.
 - Deleted TaskCLI.spec from the repository.
 
-## v2.0.0 - 28/4/2026
+## [2.0.0] - 2026-04-28
 
 This version marks the release of the new feature: tasklists!
 
@@ -46,7 +50,7 @@ This version marks the release of the new feature: tasklists!
 - Removed the visibility of aliases of commands in help menu. It's now in the individual commands help menu context.
 - Modified the pyproject.toml to move types-dateparser to dev-dependencies, and to remove rich from the main dependency section.
 
-## v1.0.0 - 24/4/2026
+## [1.0.0] - 2026-04-24
 
 This version marks the initial release of the TaskCLI.
 
@@ -55,3 +59,10 @@ This version marks the initial release of the TaskCLI.
 - Added customizable settings you can configure yourself using the `config` command.
 - Added logging using loguru, saved in `AppData\Roaming\taskcli` in `app.log`.
 - Added more destructive commands, like `clear` to clear your entire tasklist, or `reset` for a full factory reset of your taskcli and configs.
+
+[Unreleased]: https://github.com/nerrader/nerraders-taskcli/compare/v3.0.1...HEAD
+[3.0.1]: https://github.com/nerrader/nerraders-taskcli/compare/v3.0.0...v3.0.1
+[3.0.0]: https://github.com/nerrader/nerraders-taskcli/compare/v2.1.0...v3.0.0
+[2.1.0]: https://github.com/nerrader/nerraders-taskcli/compare/v2.0.0...v2.1.0
+[2.0.0]: https://github.com/nerrader/nerraders-taskcli/compare/v1.0.0...v2.0.0
+[1.0.0]: https://github.com/nerrader/nerraders-taskcli/releases/tag/v1.0.0
