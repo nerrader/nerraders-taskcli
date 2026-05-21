@@ -1,9 +1,18 @@
-# v3.0.1 - 20/5/2026
+# CHANGELOG
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## v3.0.1 - 20/5/2026
+
 - Refactored most of config.py to make the configuration wizard outside the class.
 - Added the new questionary style to more prompts for consistency.
 - Fixed the bug where the `add tasklists` command wasn't working.
 
-# v3.0.0 - 12/5/2026
+## v3.0.0 - 12/5/2026
+
 - Refactored most of the codebase to get rid of the redundant `TasklistManager` and `ListManager` class in tasks.py to switch to more functional programming.
 - Added a new constants.py file to remove unnecessary dependency injection.
 - Added a config `tasklists_dir_filepath` to change the folder/directory where the tasklists are saved at.
@@ -18,7 +27,8 @@
 - Enhanced the README.md with better quick usage commmands and more information clarity for new users.
 - Fixed some dependency vulnerabilities found by dependabot by updating some specific packages to the latest version.
 
-# v2.1.0 - 5/5/2026
+## v2.1.0 - 5/5/2026
+
 - Added compatibility for other OSes such as Linux and macOS.
 - Added platformdirs module to help with developing the multi OS compatibility feature.
 - Added a `--version` `-V` flag that shows the version of TaskCLI you're using.
@@ -27,15 +37,19 @@
 - Added an `__init__.py` to make it a regular package.
 - Deleted TaskCLI.spec from the repository.
 
-# v2.0.0 - 28/4/2026
+## v2.0.0 - 28/4/2026
+
 This version marks the release of the new feature: tasklists!
+
 - Added the tasklists feature, which allows you to add, delete, rename, and switch between tasklists, with the use of one subcommand: `tasklist`.
 - Added a real README.md to my project.
 - Removed the visibility of aliases of commands in help menu. It's now in the individual commands help menu context.
 - Modified the pyproject.toml to move types-dateparser to dev-dependencies, and to remove rich from the main dependency section.
 
-# v1.0.0 - 24/4/2026
+## v1.0.0 - 24/4/2026
+
 This version marks the initial release of the TaskCLI.
+
 - Added core features like adding, removing, updating, marking, listing tasks.
 - Added other task attributes such as priority and duedate.
 - Added customizable settings you can configure yourself using the `config` command.

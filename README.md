@@ -4,7 +4,7 @@ Nerrader's TaskCLI was a tool that was born out of necessity. I always had my ow
 
 So, I built this tool to get rid of my mental clutter by providing a way to better organize and track my responsibilities, so I can focus my time and energy on actually doing the work, rather than spending time worrying about what I might have forgotten.
 
-# Features
+## Features
 
 - ### Core Features of a TaskCLI
 
@@ -34,7 +34,7 @@ So, I built this tool to get rid of my mental clutter by providing a way to bett
 
     This tool allows you to undo and redo changes in the tasklist by using `undo` and `redo` commands respectively.
 
-# How to Download & Use
+## How to Download & Use
 
 With these instructions, I am assuming you are using the **latest version of the tool**.
 
@@ -91,7 +91,7 @@ Use `--help` after any command to find more about the **command's arguments, opt
 >
 > Also, make sure to **check and configure your settings** by using the `config` command, as **defaults might be undesirable.**
 
-#### Main TaskCLI Commands:
+#### Main TaskCLI Commands
 
 | Command  | Required Arguments          | Description                                                              |
 | :------: | :-------------------------- | :----------------------------------------------------------------------- |
@@ -107,7 +107,7 @@ Use `--help` after any command to find more about the **command's arguments, opt
 > [!NOTE]
 > All data and logs are stored locally in `AppData/Roaming/nerrader/TaskCLI`.
 
-# Upcoming/Planned Features
+## Upcoming/Planned Features
 
 Here are some features that will be planned for **future major/minor releases** of the TaskCLI.
 
@@ -116,7 +116,7 @@ Here are some features that will be planned for **future major/minor releases** 
 - List sorting
 - Testing using `pytest`
 
-# Contributing
+## Contributing
 
 This project welcomes all contributors, and whether you are fixing a bug, adding a new feature, or just improving the documentation of this project, you can get started by just following these steps:
 
@@ -145,7 +145,7 @@ Branches should start with a branch prefix such as `feature/` for new features, 
 
 By contributing this project, you agree that your contribution will be **licensed under the MIT License.**
 
-# Project Module Technical Stack
+## Project Module Technical Stack
 
 This project uses external python libraries to help with the development process. This section aims to document them and explain what each of them do.
 
