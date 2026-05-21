@@ -43,6 +43,15 @@ With these instructions, I am assuming you are using the **latest version of the
 3. **Open your terminal**, and navigate to the **folder containing the .exe.**
 4. Start running commands!
 
+> [!important]
+> If Windows flags the .exe as unrecognized, click on **More Info > Run Anyway**
+>
+> This happens because this tool is new and does not have a paid Certificate. That would cost me $200/year to sign.
+>
+> Here's a [VirusTotal scan](https://www.virustotal.com/gui/file/8c74735d3fb9c6f11d999973129f65de4a7248f4542a28b7ec20f229a6d2dac3?nocache=1) I did on my own .exe as of v3.0.1
+>
+> If you are still curious or still skeptical of the safety of the .exe, feel free to run your own VirusTotal scan, or just check the source code that is available right here on GitHub. Everything's open source.
+
 ### Quick Usage
 
 Here are some **quick commands** to get you to know how it works better:
